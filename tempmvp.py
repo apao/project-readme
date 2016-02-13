@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup as bs
 from pyquery import PyQuery as pq
 from lxml import etree
 import re
+import json
 
 WORLDCAT_STANDARD_URL = "http://www.worldcat.org"
 WORLDCAT_SEARCH_URL = "http://www.worldcat.org/search?q="
@@ -219,11 +220,23 @@ def get_sccl_availability(isbn):
     # '/1214096103?'
     # >>> '/1214096103?'[1:-1]
     # '1214096103'
-
-    pass
+    # >>> page = requests.get("https://sccl.bibliocommons.com/item/show_circulation/1402794103.json")
+    # >>> import json
+    # >>> data = json.loads(page.text)
+    # >>> html = data['html']
+    # >>> pq_avail = pq(html)
+    # >>> pq_avail('tr')
+    # >>> for tr in pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items():
+    # ...     for td in tr.find('td').items():
+    # ...         print td.text()
+    # ...     print "=================="
     
+    availabilities_for_isbn = {}  # key: isbn, value: dict of dicts
+    full_list_of_branch_avails = []
+
     # requests.get the sccl search page using isbn
-    sccl_search_url = SCCL_SEARCH_URL_BEG + isbn + SCCL_SEARCH_URL_END
+    sccl_search_url = SCCL_SEARCH_URL_BEG + str(isbn) + SCCL_SEARCH_URL_END
+    print sccl_search_url
 
     # requests.get the contents of the page and convert to pq object
     page = requests.get(sccl_search_url)
@@ -231,14 +244,55 @@ def get_sccl_availability(isbn):
 
     # find the sccl id no for the isbn on the page by css selector
     availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+    print availability_string
+
     if availability_string:
         regex_search_result = re.search('/(\w*)\?', availability_string)
-        sccl_id_num = regex_search_result[1:-1] # slices off the leading / and trailing ?
+        if regex_search_result:
+            if regex_search_result.group(1):
+                regex_match = regex_search_result.group(1)               
+        sccl_id_num = regex_match  # slices off the leading / and trailing ?
     else:
-        return "Item Unavailable"
+        return "Item Not Found"
 
     # with the sccl_id_num, get the sccl availability json
     sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + sccl_id_num + SCCL_AVAILABILITY_URL_JSONEND
+    print sccl_avail_url
+
+    avail_page = requests.get(sccl_avail_url)
+    json_avail_page = json.loads(avail_page.text)
+    html_section_only = json_avail_page["html"]
+    
+    pq_html_section = pq(html_section_only)
+
+    # find table rows that are not under <thead> tags
+    non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+
+    for tr in non_thead_tr_list:
+        list_of_status_details = []
+        dict_of_status_details = {}
+        for td in tr.find('td').items():
+            list_of_status_details.append(td.text())
+        branch_name_and_copies = list_of_status_details[0].split()  # 0-index item is branch name and num of copies
+        if len(branch_name_and_copies) == 1:
+            branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+        else:
+            branch_name_and_copies[1][1:-1]  # Num of copies without parens
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0]
+        dict_of_status_details['num_of_copies'] = branch_name_and_copies[1]
+        dict_of_status_details['branch_section'] = list_of_status_details[1]
+        dict_of_status_details['call_no'] = list_of_status_details[2]
+        dict_of_status_details['status'] = list_of_status_details[3]
+        full_list_of_branch_avails.append(dict_of_status_details)
+
+    availabilities_for_isbn[isbn] = full_list_of_branch_avails
+
+    return availabilities_for_isbn
+
+
+
+
+
 
 
 
