@@ -6,6 +6,7 @@ from pyquery import PyQuery as pq
 from lxml import etree
 import re
 import json
+import pprint
 
 WORLDCAT_STANDARD_URL = "http://www.worldcat.org"
 WORLDCAT_SEARCH_URL = "http://www.worldcat.org/search?q="
@@ -16,9 +17,7 @@ SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com/item/show_circulatio
 SCCL_AVAILABILITY_URL_JSONEND = ".json"
 
 
-
-
-def search_for_books(user_search_keywords):
+def search_for_books(url):
     """Searching user keywords in the WorldCat, returns a dictionary about the search results."""
 
     # WHAT WORKED FROM BPYTHON TESTING:
@@ -68,15 +67,15 @@ def search_for_books(user_search_keywords):
 
     list_of_search_results = []
 
-    # take a user's search keywords
-    # convert string to match the format for the WorldCat search results page
-    worldcat_ready_keywords = urllib.quote_plus(user_search_keywords)
+    # # take a user's search keywords
+    # # convert string to match the format for the WorldCat search results page
+    # worldcat_ready_keywords = urllib.quote_plus(user_search_keywords)
 
     # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
-    worldcat_ready_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
+    # worldcat_ready_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
 
     # requests.get the search results page and
-    results_page_xml = requests.get(worldcat_ready_url)
+    results_page_xml = requests.get(url)
 
     # use pyquery to query the results_page_xml
     pq_results_page_xml = pq(results_page_xml.content)
@@ -155,7 +154,28 @@ def search_for_books(user_search_keywords):
     return list_of_search_results
 
 
-def get_worldcat_book_details(list_of_dicts):
+def get_urls_by_search_keywords(user_search_keywords):
+    """Provided user's search keywords, return list of search results, represented by
+    a dictionary of general info and WorldCat url for each result."""
+
+    list_of_search_results = []
+
+    # take a user's search keywords
+    # convert string to match the format for the WorldCat search results page
+    worldcat_ready_keywords = urllib.quote_plus(user_search_keywords)
+
+    # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
+    worldcat_ready_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
+
+    list_of_search_results = search_for_books(worldcat_ready_url)
+
+    return list_of_search_results
+
+
+def get_isbn_by_url(dict_of_item):
+    """Provided one item's dictionary results from search_for_books(keywords),
+    returns ISBN numbers for that item by the worldcat URL of its items details page."""
+
     # return list of only ISBN-13's for each url:
     # [ { '[url]': [#, #, #, ...] },
     #   ...
@@ -166,36 +186,74 @@ def get_worldcat_book_details(list_of_dicts):
     # >>> isbn
     # 'ISBN: 9780385349949 0385349947'
 
+    # returns [{'http://www.worldcat.org/title/catch-22-a-novel/oclc/271160&referer=brief_results': {'ISBN-10': '0671128051', 'ISBN-13': '978067112
+    # 8050'}}, {'http://www.worldcat.org/title/catch-as-catch-can-the-collected-stories-and-other-writings/oclc/51095413&referer=brief_resu
+    # lts': {'ISBN-10': '0743243749', 'ISBN-13': '9780743243742'}}, {'http://www.worldcat.org/title/conversations-with-joseph-heller/oclc/2
+    # 7186451&referer=brief_results': {'ISBN-10': '0878056351', 'ISBN-13': '9780878056354'}}, {'http://www.worldcat.org/title/closing-time-
+    # a-novel/oclc/30544119&referer=brief_results': {'ISBN-10': '0684804506', 'ISBN-13': '9780684804507'}}, {'http://www.worldcat.org/title
+    # /joseph-heller/oclc/14166525&referer=brief_results': {'ISBN-10': '0805774920', 'ISBN-13': '9780805774924'}}, {'http://www.worldcat.or
+    # g/title/joseph-hellers-catch-22/oclc/719518&referer=brief_results': {}}, {'http://www.worldcat.org/title/catch-22-joseph-heller/oclc/
+    # 753253992&referer=brief_results': {'ISBN-10': '1411407180', 'ISBN-13': '9781411407183'}}, {'http://www.worldcat.org/title/yossarian-s
+    # lept-here-when-joseph-heller-was-dad-the-apthorp-was-home-and-life-was-a-catch-22/oclc/687664279&referer=brief_results': {'ISBN-10': 
+    # '1439197695', 'ISBN-13': '9781439197691'}}, {'http://www.worldcat.org/title/catch-22-joseph-heller/oclc/54036951&referer=brief_result
+    # s': {'ISBN-10': '1586633813', 'ISBN-13': '9781586633813'}}, {'http://www.worldcat.org/title/just-one-catch-a-biography-of-joseph-hell
+    # er/oclc/704383812&referer=brief_results': {'ISBN-10': '0312596855', 'ISBN-13': '9780312596859'}}]
+
     isbn_10_key = 'ISBN-10'
     isbn_13_key = 'ISBN-13'
+
+    # initialize the empty dicts for this specific result
+    dict_for_url = {}
+    dict_of_isbns_with_url_key = {}
+
+    # get the url string from the dictionary passed into this function
+    url = dict_of_item['worldcaturl']
+    
+    # requests.get the contents of the page and convert to pq object
+    page = requests.get(url)
+    pq_page = pq(page.content)
+    
+    # find the isbns on the page by their css selector and format them as a list
+    isbn_string = pq_page('#details-standardno').eq(0).text()
+    isbn_list = isbn_string.split(" ")
+    
+    # for any list item that is an ISBN of a particular length, assign the appropriate key and value
+    for item in isbn_list:
+        if item != "ISBN:" and len(item) == 10:
+            dict_for_url[isbn_10_key] = str(item)
+        elif item != "ISBN:" and len(item) == 13:
+            dict_for_url[isbn_13_key] = str(item)
+    
+    # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
+    dict_of_isbns_with_url_key[url] = dict_for_url
+
+    return dict_of_isbns_with_url_key
+
+
+def get_isbns_from_urls_list(list_of_dicts):
+    """Given the returned list of item dictionaries from get_urls_by_search_keywords(keywords), 
+    returns the respective list of dictionaries with item url as key and isbn(s) as pair."""
+
+    # SAMPLE RETURNED RESPONSE FROM BPYTHON TESTING:
+    # returns [{'http://www.worldcat.org/title/brain-rules-12-principles-for-surviving-and-thriving-at-work-home-and-school/oclc/184871778&referer=
+    # brief_results': {'ISBN-10': '0979777747', 'ISBN-13': '9780979777745'}}, {'http://www.worldcat.org/title/brain-rules-for-baby-how-to-r
+    # aise-a-smart-and-happy-child-from-zero-to-five/oclc/505420609&referer=brief_results': {'ISBN-10': '0983263302', 'ISBN-13': '978098326
+    # 3302'}}, {'http://www.worldcat.org/title/think-like-a-freak-the-authors-of-freakonomics-offer-to-retrain-your-brain/oclc/870699040&re
+    # ferer=brief_results': {'ISBN-10': '0606369414', 'ISBN-13': '9780606369411'}}, {'http://www.worldcat.org/title/kennedys-brain/oclc/154
+    # 309109&referer=brief_results': {'ISBN-10': '1595581847', 'ISBN-13': '9781595581846'}}, {'http://www.worldcat.org/title/grain-brain-th
+    # e-surprising-truth-about-wheat-carbs-and-sugar-your-brains-silent-killers/oclc/827082643&referer=brief_results': {'ISBN-10': '0316239
+    # 836', 'ISBN-13': '9780316239837'}}, {'http://www.worldcat.org/title/words-and-rules-the-ingredients-of-language/oclc/42290964&referer
+    # =brief_results': {'ISBN-10': '0965437469', 'ISBN-13': '9780965437462'}}, {'http://www.worldcat.org/title/subliminal-how-your-unconsci
+    # ous-mind-rules-your-behavior/oclc/753624823&referer=brief_results': {'ISBN-10': '0307378217', 'ISBN-13': '9780307378217'}}, {'http://
+    # www.worldcat.org/title/gods-brain/oclc/465330631&referer=brief_results': {'ISBN-10': '1616141646', 'ISBN-13': '9781616141646'}}, {'ht
+    # tp://www.worldcat.org/title/paradoxical-brain/oclc/688679738&referer=brief_results': {'ISBN-10': '0521115574', 'ISBN-13': '9780521115
+    # 575'}}, {'http://www.worldcat.org/title/new-complete-hoyle-the-authoritative-guide-to-the-official-rules-of-all-popular-games-of-skil
+    # l-and-chance/oclc/21197036&referer=brief_results': {'ISBN-10': '0385402708', 'ISBN-13': '9780385402705'}}]
+
     list_of_dicts_with_isbns = []
 
-    for dict_of_result in list_of_dicts:
-        # initialize the empty dicts for this specific result
-        dict_for_url = {}
-        dict_of_isbns_with_url_key = {}
-
-        # get the url string from the dictionary passed into this function
-        url = dict_of_result['worldcaturl']
-        
-        # requests.get the contents of the page and convert to pq object
-        page = requests.get(url)
-        pq_page = pq(page.content)
-        
-        # find the isbns on the page by their css selector and format them as a list
-        isbn_string = pq_page('#details-standardno').eq(0).text()
-        isbn_list = isbn_string.split(" ")
-        
-        # for any list item that is an ISBN of a particular length, assign the appropriate key and value
-        for item in isbn_list:
-            if item != "ISBN:" and len(item) == 10:
-                dict_for_url[isbn_10_key] = item
-            elif item != "ISBN:" and len(item) == 13:
-                dict_for_url[isbn_13_key] = item
-        
-        # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
-        dict_of_isbns_with_url_key[url] = dict_for_url
-        
+    for dict_for_item in list_of_dicts:
+        dict_of_isbns_with_url_key = get_isbn_by_url(dict_for_item)
         # append the dictionary to the list in order of original search results rank
         list_of_dicts_with_isbns.append(dict_of_isbns_with_url_key)
 
@@ -203,6 +261,8 @@ def get_worldcat_book_details(list_of_dicts):
 
 
 def get_sccl_availability(isbn):
+    """Given an ISBN, provides availability for an item in the Santa Clara County Library System."""
+
     # for each isbn, return list of dictionaries:
     # [ { 'isbn': { 'branch_name': ____,
     #               'status': ____,
@@ -230,13 +290,43 @@ def get_sccl_availability(isbn):
     # ...     for td in tr.find('td').items():
     # ...         print td.text()
     # ...     print "=================="
+
+    # RESULTS FROM BPYTHON TESTING:
+    # https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=9780385349949&commit=Search&searchOpt=catalogue
+    # /item/show_circulation/1402794103?search_scope=CAL-SCCL
+    # https://sccl.bibliocommons.com/item/show_circulation/1402794103.json
+    # {9780385349949: [{'status': 'Available', 'branch_name': 'Campbell', 'branch_section': 'Campbell Adult - Nonfiction Section', 'num_of_
+    # copies': '(4)', 'call_no': '658.4092 SANDBER'}, {'status': 'Available', 'branch_name': 'Cupertino', 'branch_section': 'Cupertino Adul
+    # t - Nonfiction Section', 'num_of_copies': '(6)', 'call_no': '658.4092 SANDBER'}, {'status': 'Available', 'branch_name': 'Gilroy', 'br
+    # anch_section': 'Gilroy Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'Available', 'br
+    # anch_name': 'Los', 'branch_section': 'Los Altos Adult - Nonfiction Section', 'num_of_copies': 'Altos', 'call_no': '658.4092 SANDBER'}
+    # , {'status': 'Available', 'branch_name': 'Milpitas', 'branch_section': 'Milpitas Adult - Nonfiction Section', 'num_of_copies': '(4)',
+    #  'call_no': '658.4092 SANDBER'}, {'status': 'Available', 'branch_name': 'Morgan', 'branch_section': 'Morgan Hill Adult - Nonfiction S
+    # ection', 'num_of_copies': 'Hill', 'call_no': '658.4092 SANDBER'}, {'status': 'Available', 'branch_name': 'Saratoga', 'branch_section'
+    # : 'Saratoga Adult - Nonfiction Section', 'num_of_copies': '(5)', 'call_no': '658.4092 SANDBER'}, {'status': 'Due 02-20-16', 'branch_n
+    # ame': 'Campbell', 'branch_section': 'Campbell Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'st
+    # atus': 'Due 02-13-16', 'branch_name': 'Cupertino', 'branch_section': 'Cupertino Adult - Nonfiction Section', 'num_of_copies': '1', 'c
+    # all_no': '658.4092 SANDBER'}, {'status': 'Due 11-23-15', 'branch_name': 'Cupertino', 'branch_section': 'Cupertino Adult - Nonfiction 
+    # Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'Due 02-26-16', 'branch_name': 'Cupertino', 'branch_sectio
+    # n': 'Cupertino Adult - Nonfiction Section', 'num_of_copies': '(2)', 'call_no': '658.4092 SANDBER'}, {'status': 'On Holdshelf', 'branc
+    # h_name': 'Cupertino', 'branch_section': 'Cupertino Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'},
+    #  {'status': 'In storage', 'branch_name': 'Gilroy', 'branch_section': 'Gilroy Adult - Nonfiction Section', 'num_of_copies': '(2)', 'ca
+    # ll_no': '658.4092 SANDBER'}, {'status': 'Due 02-24-16', 'branch_name': 'Gilroy', 'branch_section': 'Gilroy Adult - Nonfiction Section
+    # ', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'On Holdshelf', 'branch_name': 'Milpitas', 'branch_section': 'Mil
+    # pitas Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'Due 02-29-16', 'branch_name': 'M
+    # ilpitas', 'branch_section': 'Milpitas Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': '
+    # Due 02-13-16', 'branch_name': 'Morgan', 'branch_section': 'Morgan Hill Adult - Nonfiction Section', 'num_of_copies': 'Hill', 'call_no
+    # ': '658.4092 SANDBER'}, {'status': 'Due 02-22-16', 'branch_name': 'Saratoga', 'branch_section': 'Saratoga Adult - Nonfiction Section'
+    # , 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'Due 02-16-16', 'branch_name': 'Saratoga', 'branch_section': 'Sara
+    # toga Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}, {'status': 'Due 02-22-16', 'branch_name': 'Wo
+    # odland', 'branch_section': 'Woodland Adult - Nonfiction Section', 'num_of_copies': '1', 'call_no': '658.4092 SANDBER'}]}
     
     availabilities_for_isbn = {}  # key: isbn, value: dict of dicts
     full_list_of_branch_avails = []
 
     # requests.get the sccl search page using isbn
+    # turn SCCl into a templated string, {}
     sccl_search_url = SCCL_SEARCH_URL_BEG + str(isbn) + SCCL_SEARCH_URL_END
-    print sccl_search_url
 
     # requests.get the contents of the page and convert to pq object
     page = requests.get(sccl_search_url)
@@ -244,7 +334,6 @@ def get_sccl_availability(isbn):
 
     # find the sccl id no for the isbn on the page by css selector
     availability_string = pq_page('a.circInfo.value.underlined').attr('href')
-    print availability_string
 
     if availability_string:
         regex_search_result = re.search('/(\w*)\?', availability_string)
@@ -253,11 +342,11 @@ def get_sccl_availability(isbn):
                 regex_match = regex_search_result.group(1)               
         sccl_id_num = regex_match  # slices off the leading / and trailing ?
     else:
-        return "Item Not Found"
+        availabilities_for_isbn[isbn] = "Item Not Found"
+        return availabilities_for_isbn
 
     # with the sccl_id_num, get the sccl availability json
     sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + sccl_id_num + SCCL_AVAILABILITY_URL_JSONEND
-    print sccl_avail_url
 
     avail_page = requests.get(sccl_avail_url)
     json_avail_page = json.loads(avail_page.text)
@@ -273,13 +362,14 @@ def get_sccl_availability(isbn):
         dict_of_status_details = {}
         for td in tr.find('td').items():
             list_of_status_details.append(td.text())
-        branch_name_and_copies = list_of_status_details[0].split()  # 0-index item is branch name and num of copies
+        branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
         if len(branch_name_and_copies) == 1:
             branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
         else:
-            branch_name_and_copies[1][1:-1]  # Num of copies without parens
+            branch_name_and_copies[1] = branch_name_and_copies[1][:-1] # Num of copies without parens
+        
         dict_of_status_details['branch_name'] = branch_name_and_copies[0]
-        dict_of_status_details['num_of_copies'] = branch_name_and_copies[1]
+        dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1]) 
         dict_of_status_details['branch_section'] = list_of_status_details[1]
         dict_of_status_details['call_no'] = list_of_status_details[2]
         dict_of_status_details['status'] = list_of_status_details[3]
@@ -290,6 +380,35 @@ def get_sccl_availability(isbn):
     return availabilities_for_isbn
 
 
+def get_isbn13_from_dict(dict_for_item):
+    """Given a returned dict, get the ISBN-13 of the item."""
+
+    isbn_13_key = 'ISBN-13'
+
+    key = dict_for_item.keys()[0]
+    isbn_dict = dict_for_item.get(key)
+    isbn_13 = isbn_dict.get(isbn_13_key)
+
+    return isbn_13
+
+
+def get_availabilities_for_list_of_books(list_of_dicts):
+    """Given the returned list of dicts from get_isbns_from_urls_list(list_of_dicts),
+    return a respective dict of sccl availabilities for each item in the list."""
+
+    list_of_dicts_with_availabilities = []
+
+    for dict_for_item in list_of_dicts:
+        # key_for_dict = dict_for_item.keys()[0]
+        # isbn_dict_for_item = dict_for_item.get(key_for_dict)
+        # isbn_10_for_item = isbn_dict_for_item.get(isbn_10_key)
+        # isbn_13_for_item = isbn_dict_for_item.get(isbn_13_key)
+        isbn_13_for_item = get_isbn13_from_dict(dict_for_item)
+        dict_of_item_availability = get_sccl_availability(isbn_13_for_item)
+        # append the dictionary to the list in order of original search results rank
+        list_of_dicts_with_availabilities.append(dict_of_item_availability)
+
+    return list_of_dicts_with_availabilities
 
 
 
@@ -306,5 +425,23 @@ def get_sccl_availability(isbn):
 
 
 
-# if __name__ == '__main__':
-#     search_for_books('lean in')
+
+
+
+
+
+if __name__ == '__main__':
+    # VERSION FOR TESTING ONLY LOOKING AT ONE RESULT - 4.5 seconds of processing
+    # urls = get_urls_by_search_keywords("brain rules")
+    # isbns = get_isbn_by_url(urls[0])
+    # isbn_13_test = get_isbn13_from_dict(isbns)
+    # avails = get_sccl_availability(isbn_13_test)
+    # pprint.pprint(avails)
+
+    # VERSION FOR TESTING ON FULL LIST OF 10 RESULTS - 18 seconds of processing
+    urls = get_urls_by_search_keywords("lean in")
+    isbns = get_isbns_from_urls_list(urls)
+    avails = get_availabilities_for_list_of_books(isbns)
+    pprint.pprint(avails)
+
+
