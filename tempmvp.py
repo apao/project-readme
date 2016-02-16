@@ -1,9 +1,9 @@
-import os
+# import os
 import requests
 import urllib
-from bs4 import BeautifulSoup as bs
+# from bs4 import BeautifulSoup as bs
 from pyquery import PyQuery as pq
-from lxml import etree
+# from lxml import etree
 import re
 import json
 import pprint
@@ -11,14 +11,25 @@ import pprint
 WORLDCAT_STANDARD_URL = "http://www.worldcat.org"
 WORLDCAT_SEARCH_URL = "http://www.worldcat.org/search?q="
 WORLDCAT_FILTER_LANG_EN_PRINT_ONLY = "&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
+WORLDCAT_FILTER_LANG_EN_EBOOKS_ONLY = "&fq=%20(%28x0%3Abook+x4%3Adigital%29)%20>%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
 SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
 SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com/item/show_circulation/"
 SCCL_AVAILABILITY_URL_JSONEND = ".json"
+OPEN_LIBRARY_COVER_URL = "http://covers.openlibrary.org/b/isbn/"
+OPEN_LIBRARY_SMALL_IMG_END = "-S.jpg"
+OPEN_LIBRARY_MED_IMG_END = "-M.jpg"
+OPEN_LIBRARY_LRG_IMG_END = "-L.jpg"
 
 
-def search_for_books(url):
-    """Searching user keywords in the WorldCat, returns a dictionary about the search results."""
+# =============================================
+# PRINT BOOK SEARCH ON WORLDCAT 
+# =============================================
+
+
+def search_for_print_books(url):
+    """Given the url for a WorldCat search results page of English-language print books, 
+    returns a dictionary about the first 10 search results."""
 
     # WHAT WORKED FROM BPYTHON TESTING:
     # >>> from bs4 import BeautifulSoup as bs
@@ -167,14 +178,91 @@ def get_urls_by_search_keywords(user_search_keywords):
     # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
     worldcat_ready_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
 
-    list_of_search_results = search_for_books(worldcat_ready_url)
+    list_of_search_results = search_for_print_books(worldcat_ready_url)
 
     return list_of_search_results
 
 
+# =============================================
+# EBOOK SEARCH ON WORLDCAT 
+# =============================================
+
+
+def search_for_ebooks(url):
+    """Given the url for a WorldCat search results page of English-language ebooks, 
+    returns a dictionary about the first 10 search results."""
+
+    list_of_search_results = []
+
+    results_page_xml = requests.get(url)
+
+    # use pyquery to query the results_page_xml
+    pq_results_page_xml = pq(results_page_xml.content)
+
+    # Revised edition using pquery objects only
+    content_xml = pq_results_page_xml('content').eq(3).text()
+    pq_content = pq(content_xml)
+    pq_results_list = pq_content('table.table-results tr.menuElem').items()
+
+    for idx, pq_result in enumerate(pq_results_list):
+        # read the raw_rank from the TR directly
+        raw_rank = pq_result('td.num').eq(1).text()
+        # slice the raw_rank to remove the end "."
+        rank = int(raw_rank[:-1])
+
+        dict_for_result = {}
+        # result_id = "result-"+str(rank)
+
+        # rank_of_result: get the rank of result
+        rank_of_result = rank
+        # book_title: get the book title
+        book_title = pq_result('div.name strong').text()
+        # author: get the book author(s) and slice to remove the "by " at the beginning
+        author_string = pq_result('div.author').text()[3:]
+        author_list = author_string.split(";")
+        final_author_list = []
+        for author in author_list:
+            author = author.strip()
+            final_author_list.append(author)
+
+        # worldcat_url: find href result with id="result-1" and create the new url to store in the dict
+        result_href_string = pq_result('div.name a').attr('href')
+        new_url = WORLDCAT_STANDARD_URL + result_href_string
+
+        # assign key-value to dictionary for the specific result
+        dict_for_result['rank'] = rank_of_result
+        dict_for_result['title'] = book_title
+        dict_for_result['author'] = final_author_list
+        dict_for_result['worldcaturl'] = new_url
+
+        # append the dict for the specific result to the final list of dicts
+        list_of_search_results.append(dict_for_result)
+
+    return list_of_search_results
+
+
+def get_ebook_results_by_search_keywords(user_search_keywords):
+    """Provided user's search keywords, return list of only ebook search results, represented by
+    a dictionary of general info and WorldCat url for each result."""
+
+    # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Adigital%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
+    
+    ebook_search_results = []
+    worldcat_ready_keywords = urllib.quote_plus(user_search_keywords)
+    worldcat_ready_search_ebooks_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_EBOOKS_ONLY
+    ebook_search_results = search_for_ebooks(worldcat_ready_search_ebooks_url)
+
+    return ebook_search_results
+
+
+# =============================================
+# GETTING ISBNs FROM WORLDCAT ITEM DETAILS PAGE 
+# =============================================
+
+
 def get_isbn_by_url(dict_of_item):
     """Provided one item's dictionary results from search_for_books(keywords),
-    returns ISBN numbers for that item by the worldcat URL of its items details page."""
+    returns list of ISBN-10 and ISBN-13 numbers for that item by the worldcat URL of its items details page."""
 
     # return list of only ISBN-13's for each url:
     # [ { '[url]': [#, #, #, ...] },
@@ -200,7 +288,9 @@ def get_isbn_by_url(dict_of_item):
     # er/oclc/704383812&referer=brief_results': {'ISBN-10': '0312596855', 'ISBN-13': '9780312596859'}}]
 
     isbn_10_key = 'ISBN-10'
+    isbn10_list = []
     isbn_13_key = 'ISBN-13'
+    isbn13_list = []
 
     # initialize the empty dicts for this specific result
     dict_for_url = {}
@@ -220,14 +310,140 @@ def get_isbn_by_url(dict_of_item):
     # for any list item that is an ISBN of a particular length, assign the appropriate key and value
     for item in isbn_list:
         if item != "ISBN:" and len(item) == 10:
-            dict_for_url[isbn_10_key] = str(item)
+            isbn10_list.append(str(item))
         elif item != "ISBN:" and len(item) == 13:
-            dict_for_url[isbn_13_key] = str(item)
+            isbn13_list.append(str(item))
     
+    dict_for_url[isbn_10_key] = isbn10_list
+    dict_for_url[isbn_13_key] = isbn13_list
+
     # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
     dict_of_isbns_with_url_key[url] = dict_for_url
 
     return dict_of_isbns_with_url_key
+
+
+def get_book_details_by_url(dict_of_item):
+    """Provided one item's dictionary results from search_for_books(keywords),
+    returns full book details for database for that item by the worldcat URL of its items details page."""
+
+    # return list of only ISBN-13's for each url:
+    # [ { '[url]': [#, #, #, ...] },
+    #   ...
+    # ]
+    # >>> page = requests.get("http://www.worldcat.org/title/lean-in-women-work-and-the-will-to-lead/oclc/813526963&referer=brief_results")
+    # >>> pq_details_page = pq(page.content)
+    # ISBN
+    # >>> isbn = pq_details_page('#details-standardno').eq(0).text()
+    # >>> isbn
+    # 'ISBN: 9780385349949 0385349947'
+    # TITLE
+    # >>> pq_details_page('h1.title').text()
+    # 'Lean in : women, work, and the will to lead'
+    # AUTHOR
+    # >>> authors_string = pq_details_page('#bib-author-cell').text()
+    # >>> [x.strip() for x in authors_string.split(';')]
+    # ['Sheryl Sandberg', 'Nell Scovell']
+    # COVER URL
+    # http://covers.openlibrary.org/b/isbn/9780385533225-S.jpg
+    # PUBLISHER
+    # NUMBER OF PAGES
+    # SUMMARY
+
+    isbn_10_key = 'ISBN-10'
+    isbn10_list = []
+    isbn_13_key = 'ISBN-13'
+    isbn13_list = []
+
+    # initialize the empty dicts for this specific result
+    book_details_dict = {}
+
+    # get the url string from the dictionary passed into this function
+    url = dict_of_item['worldcaturl']
+    
+    # requests.get the contents of the page and convert to pq object
+    page = requests.get(url)
+    pq_page = pq(page.content)
+    
+    # find the isbns on the page by their css selector and format them as a list
+    isbn_string = pq_page('#details-standardno').eq(0).text()
+    isbn_list = isbn_string.split(" ")
+
+    # TITLE
+    # >>> pq_details_page('h1.title').text()
+    # 'Lean in : women, work, and the will to lead'
+    title = pq_page('h1.title').text()
+
+    # AUTHOR
+    # >>> authors_string = pq_details_page('#bib-author-cell').text()
+    # >>> [x.strip() for x in authors_string.split(';')]
+    # ['Sheryl Sandberg', 'Nell Scovell']
+    authors_string = pq_page('#bib-author-cell').text()
+    author_list = [author.strip() for author in authors_string.split(';')]
+
+    # PUBLISHER
+    # >>> publisher = pq_details_page('#bib-publisher-cell').text()
+    # 'New York : Alfred A. Knopf, 2013.' (pub_loc : pub, pub_year)
+    publisher = pq_page('#bib-publisher-cell').text()
+
+    # FORMAT
+    format = pq_page('span.itemType').text()
+
+    # NUMBER OF PAGES
+    # >>> desc = pq_details_page('#details-description td').text()
+    # "228 pages; 1 edition"
+    # >>> page_num = []
+    # >>> for char in desc[desc.find('pages')-1::-1]:
+    # ...     if char != " " and not char.isdigit():
+    # ...         break
+    # ...     elif char == " " or char.isdigit():
+    # ...         page_num.insert(0, char)
+    # ...         
+    # ...     
+    # ... 
+    # >>> page_num
+    # ['2', '2', '8', ' ']
+    desc = pq_page('#details-description td').text()
+    page_num = []
+    
+    for char in desc[desc.find('pages')-2::-1]:
+        if not char.isdigit():
+            break
+        else:
+            page_num.insert(0, char)
+
+    num_of_pages = "".join(page_num)
+
+    # SUMMARY
+    # >>> summary = pq_details_page('div.abstracttxt').text()
+    summary = pq_page('div.abstracttxt').text()
+    
+    # for any list item that is an ISBN of a particular length, assign the appropriate key and value
+    for item in isbn_list:
+        if item != "ISBN:" and len(item) == 10:
+            isbn10_list.append(str(item))
+        elif item != "ISBN:" and len(item) == 13:
+            isbn13_list.append(str(item))
+    
+    book_details_dict[isbn_10_key] = isbn10_list
+    book_details_dict[isbn_13_key] = isbn13_list
+
+    # >>> OPEN_LIBRARY_COVER_URL + ISBN + OPEN_LIBRARY_MED_IMG_END
+    # 'http://covers.openlibrary.org/b/isbn/9780385349956-M.jpg'
+    cover_url_list = [OPEN_LIBRARY_COVER_URL+isbn13+OPEN_LIBRARY_MED_IMG_END for isbn13 in isbn13_list]
+
+    # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
+    book_details_dict['worldcaturl'] = url
+    book_details_dict['title'] = title
+    book_details_dict['author'] = author_list
+    book_details_dict['publisher'] = publisher
+    book_details_dict['page_count'] = num_of_pages
+    book_details_dict['cover_url'] = cover_url_list
+    book_details_dict['format'] = format
+    book_details_dict['summary'] = summary
+
+    return book_details_dict
+
 
 
 def get_isbns_from_urls_list(list_of_dicts):
@@ -259,6 +475,10 @@ def get_isbns_from_urls_list(list_of_dicts):
 
     return list_of_dicts_with_isbns
 
+
+# ===================================
+# PRINT SEARCH FOR SCCL AVAILABILITY 
+# ===================================
 
 def get_sccl_availability(isbn):
     """Given an ISBN, provides availability for an item in the Santa Clara County Library System."""
@@ -368,7 +588,7 @@ def get_sccl_availability(isbn):
         else:
             branch_name_and_copies[1] = branch_name_and_copies[1][:-1] # Num of copies without parens
         
-        dict_of_status_details['branch_name'] = branch_name_and_copies[0]
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
         dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1]) 
         dict_of_status_details['branch_section'] = list_of_status_details[1]
         dict_of_status_details['call_no'] = list_of_status_details[2]
@@ -381,15 +601,15 @@ def get_sccl_availability(isbn):
 
 
 def get_isbn13_from_dict(dict_for_item):
-    """Given a returned dict, get the ISBN-13 of the item."""
+    """Given a returned dict, get the list of ISBN-13 numbers of the item."""
 
     isbn_13_key = 'ISBN-13'
 
     key = dict_for_item.keys()[0]
     isbn_dict = dict_for_item.get(key)
-    isbn_13 = isbn_dict.get(isbn_13_key)
+    isbn_13_list = isbn_dict.get(isbn_13_key)
 
-    return isbn_13
+    return isbn_13_list
 
 
 def get_availabilities_for_list_of_books(list_of_dicts):
@@ -399,16 +619,33 @@ def get_availabilities_for_list_of_books(list_of_dicts):
     list_of_dicts_with_availabilities = []
 
     for dict_for_item in list_of_dicts:
-        # key_for_dict = dict_for_item.keys()[0]
-        # isbn_dict_for_item = dict_for_item.get(key_for_dict)
-        # isbn_10_for_item = isbn_dict_for_item.get(isbn_10_key)
-        # isbn_13_for_item = isbn_dict_for_item.get(isbn_13_key)
-        isbn_13_for_item = get_isbn13_from_dict(dict_for_item)
-        dict_of_item_availability = get_sccl_availability(isbn_13_for_item)
-        # append the dictionary to the list in order of original search results rank
-        list_of_dicts_with_availabilities.append(dict_of_item_availability)
+        list_of_availability = get_sccl_avail_for_item(dict_for_item)
+            # append the dictionary to the list in order of original search results rank
+        list_of_dicts_with_availabilities.append(list_of_availability)
 
     return list_of_dicts_with_availabilities
+
+
+def get_sccl_avail_for_item(dict_of_item):
+    """Returns the full list of SCCL availability for one item returned by get_isbn_by_url on
+    one result from get_urls_by_search_keywords."""
+
+    # >>> get_sccl_avail_for_item(get_isbn_by_url(get_urls_by_search_keywords("brain rules")[0]))
+
+    isbn13_list = get_isbn13_from_dict(dict_of_item)
+    list_of_dicts_with_availabilities = []
+
+    for isbn13 in isbn13_list:
+        dict_of_isbn_availability = get_sccl_availability(isbn13)
+        # append the dictionary to the list for the item
+        list_of_dicts_with_availabilities.append(dict_of_isbn_availability)
+
+    return list_of_dicts_with_availabilities
+
+
+# =============================================
+# EBOOK SEARCH FOR SCCL AVAILABILITY
+# =============================================
 
 
 
@@ -434,11 +671,11 @@ if __name__ == '__main__':
     # VERSION FOR TESTING ONLY LOOKING AT ONE RESULT - 4.5 seconds of processing
     # urls = get_urls_by_search_keywords("brain rules")
     # isbns = get_isbn_by_url(urls[0])
-    # isbn_13_test = get_isbn13_from_dict(isbns)
-    # avails = get_sccl_availability(isbn_13_test)
+    # avails = get_sccl_avail_for_item(isbns)
     # pprint.pprint(avails)
 
-    # VERSION FOR TESTING ON FULL LIST OF 10 RESULTS - 18 seconds of processing
+    # VERSION FOR TESTING ON FULL LIST OF 10 RESULTS - more than 18 seconds of processing
+    # >>> get_availabilities_for_list_of_books(get_isbns_from_urls_list(get_urls_by_search_keywords("brain rules")))
     urls = get_urls_by_search_keywords("lean in")
     isbns = get_isbns_from_urls_list(urls)
     avails = get_availabilities_for_list_of_books(isbns)
