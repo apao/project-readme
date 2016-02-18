@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+{% for dict_item in list %}
+<div class="row">
+
+    <div class="row">
+      
+      <div class="col-xs-12 col-sm-4">
+        <img src="{{ dict_item.get('coverurl') }}" class="img-responsive" alt="">
+      </div>
+      <div class="col-xs-12 col-sm-8">
+        <div class="row title">
+            {{ dict_item.get('title') }}
+        </div>
+        <div class="row author">
+            {{ dict_item.get('author') }}
+        </div>
+        <div class="row publisher">
+            {{ dict_item.get('publisher') }}
+        </div>
+        <div class="row format">
+            {{ dict_item.get('format') }}
+        </div>
+        <div class="row pagecount">
+            {{ dict_item.get('page_count') }}
+        </div>
+      </div>
+    </div>
+
+</div>
+{% endfor %}
+
+
+{% endblock %}

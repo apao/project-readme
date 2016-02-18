@@ -20,6 +20,7 @@ OPEN_LIBRARY_COVER_URL = "http://covers.openlibrary.org/b/isbn/"
 OPEN_LIBRARY_SMALL_IMG_END = "-S.jpg"
 OPEN_LIBRARY_MED_IMG_END = "-M.jpg"
 OPEN_LIBRARY_LRG_IMG_END = "-L.jpg"
+HTTP_URL = "http:"
 
 
 # =============================================
@@ -153,11 +154,16 @@ def search_for_print_books(url):
         result_href_string = pq_result('div.name a').attr('href')
         new_url = WORLDCAT_STANDARD_URL + result_href_string
 
+        # cover_url: 
+        cover_url = pq_result('td.coverart img').attr('src')
+        final_cover_url = HTTP_URL + cover_url
+
         # assign key-value to dictionary for the specific result
         dict_for_result['rank'] = rank_of_result
         dict_for_result['title'] = book_title
         dict_for_result['author'] = final_author_list
         dict_for_result['worldcaturl'] = new_url
+        dict_for_result['coverurl'] = final_cover_url
 
         # append the dict for the specific result to the final list of dicts
         list_of_search_results.append(dict_for_result)

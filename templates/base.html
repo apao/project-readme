@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Chewy">
+    <link href="/static/css/styles.css" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>project readme</title>
+</head>
+
+<body>
+    <nav class="navbar">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="glyphicon glyphicon-menu-hamburger"></span>
+          </button>  
+          <a class="navbar-brand" href="">
+            <i class="fa fa-book"></i>
+          </a>
+        </div> <!-- navbar-header -->
+        <div class="collapse navbar-collapse" id="myNavbar">
+            <ul class="nav navbar-nav navbar-left">
+            <li role="presentation" class="active"><a href="#">Home</a></li>
+            <li role="presentation"><a href="/about">About project readme</a></li>
+            <li role="presentation"><a href="/bookrecs">Book Recommendations</a></li>
+            <li role="presentation"><a href="/contact">Contact</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="/register">Register</a></li>
+            <li><a href="/login">Log In</a></li>
+          </ul>
+        </div> <!-- collapse navbar -->
+      </div> <!-- container-fluid -->
+    </nav>
+
+
+    <div class="container-fluid">
+        <div class="row">
+            {% block content %}
+            {% endblock %}   
+        </div> <!-- row for table for large devices -->
+    </div> <!-- container -->
+
+
+
+
+
+
+<!-- <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3">
+</div> -->
+
+
+
+
+
+
+
+
+
+
+    <!-- You need this in order to use JS-based components in the 
+    further study. Leave this at the bottom and code above it. -->
+
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+</body>
+
+</html>
