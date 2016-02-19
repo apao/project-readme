@@ -51,28 +51,19 @@ def get_search_results():
     matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
     if matching_query:
-        # get matching book_ids and info
-        # db_results = get_db_results()
-        # add results here
-        results = get_db_results(matching_query.query_id)
+        final_results = get_db_results(matching_query.query_id)
+    else: 
+        initial_results = get_crawl_results(search_keywords)
+        final_results = []
 
-    else:
+        for item in initial_results:
 
-        results = get_crawl_results(search_keywords)
+            new_dict = get_item_details(item)
+            rank = item['rank']
+            add_new_book(search_keywords, new_dict, rank)
+            final_results.append(new_dict)
 
-    for item in results:
-
-        item_details = get_item_details(item)
-
-        # write code to add book_details to database for:
-        # class Book
-        # class Author
-        # class ISBN10
-        # class ISBN13
-        # class Query
-        # class QueryBook
-
-    return render_template("searchresults.html", list=item_details)
+    return render_template("searchresults.html", list=final_results)
 
 
 @app.route('/about')

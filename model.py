@@ -119,8 +119,8 @@ class BookAuthors(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('authors.author_id'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
 
-    author = db.relationship('Author', backref=db.backref('bookauthors', order_by=book_id))
-    book = db.relationship('Book', backref=db.backref('bookauthors', order_by=book_id)) 
+    author = db.relationship('Author', backref=db.backref('books', order_by=book_id))
+    book = db.relationship('Book', backref=db.backref('authors', order_by=book_id)) 
 
 
 class Format(db.Model):
@@ -141,8 +141,8 @@ class BookFormat(db.Model):
     format_id = db.Column(db.Integer, db.ForeignKey('formats.format_id'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
 
-    format = db.relationship('Format', backref=db.backref('formats', order_by=format_id))
-    book = db.relationship('Book', backref=db.backref('books', order_by=book_id)) 
+    format = db.relationship('Format', backref=db.backref('books', order_by=format_id))
+    book = db.relationship('Book', backref=db.backref('bookformats', order_by=book_id)) 
 
 
 class AmazonInfo(db.Model):
@@ -251,7 +251,7 @@ class QueryBook(db.Model):
     book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
     rank_of_result = db.Column(db.Integer, nullable=False)
 
-    book = db.relationship('Book', backref=db.backref('querybooks', order_by=querybook_id))
+    book = db.relationship('Book', backref=db.backref('queries', order_by=querybook_id))
 
     @classmethod
     def get_results_by_query_id(cls, query_id):

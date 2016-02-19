@@ -1,8 +1,10 @@
 """Utility file to add info to project readme database."""
 
 from sqlalchemy import func
+# from sqlalchemy.orm import subqueryload
 from model import Book
 from model import Author
+from model import BookAuthors
 from model import ISBN10
 from model import ISBN13
 from model import Format
@@ -92,35 +94,33 @@ def get_db_results(queryid):
     for querybook in querybook_list:
 
         result_dict = {}
-        bookid = querybook.book.book_id
+        current_book = querybook.book
 
-        result_dict['worldcaturl'] = Book.query.get(bookid).worldcaturl
-        result_dict['title'] = Book.query.get(bookid).title
-        result_dict['publisher'] = Book.query.get(bookid).publisher
-        result_dict['page_count'] = Book.query.get(bookid).page_count
-        result_dict['coverurl'] = Book.query.get(bookid).coverurl
-        result_dict['summary'] = Book.query.get(bookid).summary
-        result_dict['format'] = BookFormat.query.filter_by(book_id=bookid).first().format.format_type
+        result_dict['worldcaturl'] = current_book.worldcaturl
+        result_dict['title'] = current_book.title
+        result_dict['publisher'] = current_book.publisher
+        result_dict['page_count'] = current_book.page_count
+        result_dict['coverurl'] = current_book.coverurl
+        result_dict['summary'] = current_book.summary
+        result_dict['format'] = current_book.bookformats[0].format.format_type
 
-        author_list = BookAuthors.query.filter_by(book_id=bookid).all()
-        author_list_for_dict = [a.author.author_name for a in author_list]
+        # CONSIDER USING SQLALCHEMY RELATIONSHIP LOADING
+        # http://docs.sqlalchemy.org/en/latest/orm/loading_relationships.html
+        # author_list = BookAuthors.query.filter_by(book_id=bookid).all()
+        author_list_for_dict = [a.author.author_name for a in current_book.authors]
         result_dict['author'] = author_list_for_dict
 
-        isbn10_list = ISBN10.query.filter_by(book_id=bookid).all()
-        isbn10_list_for_dict = [num.isbn10 for num in isbn10_list]
+        # isbn10_list = ISBN10.query.filter_by(book_id=bookid).all()
+        isbn10_list_for_dict = [num.isbn10 for num in current_book.isbn10s]
         result_dict['ISBN-10'] = isbn10_list_for_dict
 
-        isbn13_list = ISBN13.query.filter_by(book_id=bookid).all()
-        isbn13_list_for_dict = [num.isbn13 for num in isbn13_list]
+        # isbn13_list = ISBN13.query.filter_by(book_id=bookid).all()
+        isbn13_list_for_dict = [num.isbn13 for num in current_book.isbn13s]
         result_dict['ISBN-13'] = isbn13_list_for_dict
 
         db_results_list.append(result_dict)
 
     return db_results_list
-
-
-
-
 
 
 
