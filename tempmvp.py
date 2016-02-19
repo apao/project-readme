@@ -436,7 +436,8 @@ def get_book_details_by_url(dict_of_item):
 
     # >>> OPEN_LIBRARY_COVER_URL + ISBN + OPEN_LIBRARY_MED_IMG_END
     # 'http://covers.openlibrary.org/b/isbn/9780385349956-M.jpg'
-    cover_url_list = [OPEN_LIBRARY_COVER_URL+isbn13+OPEN_LIBRARY_MED_IMG_END for isbn13 in isbn13_list]
+    # cover_url_list = [OPEN_LIBRARY_COVER_URL+isbn13+OPEN_LIBRARY_MED_IMG_END for isbn13 in isbn13_list]
+    coverurl = dict_of_item['coverurl']
 
     # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
     book_details_dict['worldcaturl'] = url
@@ -444,7 +445,7 @@ def get_book_details_by_url(dict_of_item):
     book_details_dict['author'] = author_list
     book_details_dict['publisher'] = publisher
     book_details_dict['page_count'] = num_of_pages
-    book_details_dict['cover_url'] = cover_url_list
+    book_details_dict['coverurl'] = coverurl
     book_details_dict['format'] = format
     book_details_dict['summary'] = summary
 
@@ -653,6 +654,21 @@ def get_sccl_avail_for_item(dict_of_item):
 # EBOOK SEARCH FOR SCCL AVAILABILITY
 # =============================================
 
+
+# =============================================
+# FUNCTIONS TO BE USED IN SERVER.PY
+# =============================================
+
+def get_crawl_results(keywords):
+
+    results = get_urls_by_search_keywords(keywords)
+    return results
+
+
+def get_item_details(item_dict):
+
+    details = get_book_details_by_url(item_dict)
+    return details
 
 
 

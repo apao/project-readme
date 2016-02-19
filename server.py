@@ -7,7 +7,9 @@ from flask_debugtoolbar import DebugToolbarExtension
 
 from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db
 
-import tempmvp
+from tempmvp import get_crawl_results, get_item_details
+
+from dbfunctions import get_db_results, add_new_book
 
 
 app = Flask(__name__)
@@ -46,13 +48,13 @@ def get_search_results():
 
     search_keywords = request.form.get('keywords').strip()
 
-    matching_keywords = Query.query.filter_by(query_keywords=search_keywords).first()
+    matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
-    if matching_keywords:
+    if matching_query:
         # get matching book_ids and info
         # db_results = get_db_results()
         # add results here
-        results = get_db_results(matching_keywords)
+        results = get_db_results(matching_query.query_id)
 
     else:
 
@@ -107,22 +109,6 @@ def login_page():
 
     return render_template("login.html")
 
-
-def get_db_results(keywords):
-
-    pass
-
-
-def get_crawl_results(keywords):
-
-    results = tempmvp.get_urls_by_search_keywords(keywords)
-    return results
-
-
-def get_item_details(item_dict):
-
-    details = tempmvp.get_book_details_by_url(item_dict)
-    return details
 
 
 

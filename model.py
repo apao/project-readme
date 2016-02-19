@@ -50,7 +50,6 @@ class Book(db.Model):
     title = db.Column(db.String(128), nullable=False)
     publisher = db.Column(db.String(128), nullable=False)
     page_count = db.Column(db.Integer, nullable=True)
-    format = db.Column(db.String(25), nullable=True)
     summary = db.Column(db.String(5000), nullable=True)
     coverurl = db.Column(db.String(256), nullable=False)
    
@@ -110,8 +109,6 @@ class Author(db.Model):
     author_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     author_name = db.Column(db.String(50), nullable=False)
 
-    book = db.relationship('Book', backref=db.backref('authors', order_by=author_id))
-
 
 class BookAuthors(db.Model):
     """Association table for books and authors on website."""
@@ -133,8 +130,6 @@ class Format(db.Model):
 
     format_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     format_type = db.Column(db.String(50), nullable=False)
-
-    book = db.relationship('Book', backref=db.backref('formats', order_by=format_id))
 
 
 class BookFormat(db.Model):
@@ -162,6 +157,8 @@ class AmazonInfo(db.Model):
     amazon_review_count = db.Column(db.Integer, nullable=True)
     amazon_review_text = db.Column(db.String(10000), nullable=True)
 
+    book = db.relationship('Book', backref=db.backref('amazoninfo', order_by=amazoninfo_id))
+
 
 class GoodreadsInfo(db.Model):
     """Goodreads Info for book on website."""
@@ -174,6 +171,8 @@ class GoodreadsInfo(db.Model):
     goodreads_rating = db.Column(db.Float, nullable=True)
     goodreads_review_count = db.Column(db.Integer, nullable=True)
     goodreads_review_text = db.Column(db.String(10000), nullable=True)
+
+    book = db.relationship('Book', backref=db.backref('goodreadsinfo', order_by=goodreadsinfo_id))
 
 
 class LibrarySystem(db.Model):
