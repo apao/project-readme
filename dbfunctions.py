@@ -16,7 +16,19 @@ from model import db
 # from server import app
 from datetime import datetime
 
-def add_new_book(keywords, newdict, rank):
+
+def add_new_query(keywords):
+    """Given search keywords, add a new query to the db."""
+
+    current_time = datetime.utcnow()
+    new_query = Query(query_keywords=keywords, last_updated=current_time)
+    db.session.add(new_query)
+    db.session.commit()
+
+    return new_query.query_id
+
+
+def add_new_book(queryid, newdict, rank):
     """Given a dict about a book, add the book details to the db."""
 
     new_book = Book(
@@ -71,12 +83,12 @@ def add_new_book(keywords, newdict, rank):
     db.session.flush()
 
     # QUERY & QUERYBOOK
-    current_time = datetime.utcnow()
-    new_query = Query(query_keywords=keywords, last_updated=current_time)
-    db.session.add(new_query)
-    db.session.flush()
+    # current_time = datetime.utcnow()
+    # new_query = Query(query_keywords=keywords, last_updated=current_time)
+    # db.session.add(new_query)
+    # db.session.flush()
 
-    new_query_book = QueryBook(query_id=new_query.query_id, book_id=new_book.book_id, rank_of_result=rank)
+    new_query_book = QueryBook(query_id=queryid, book_id=new_book.book_id, rank_of_result=rank)
     db.session.add(new_query_book)
     db.session.flush()
 

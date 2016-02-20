@@ -9,7 +9,7 @@ from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db,
 
 from tempmvp import get_crawl_results, get_item_details
 
-from dbfunctions import get_db_results, add_new_book
+from dbfunctions import get_db_results, add_new_book, add_new_query
 
 
 app = Flask(__name__)
@@ -29,7 +29,14 @@ def index():
     return render_template("home.html")
 
 
-@app.route('/results', methods=['GET'])
+@app.route('/search')
+def search_page():
+    """Search page."""
+
+    return render_template("search.html")
+
+
+@app.route('/results', methods=['POST'])
 def get_search_results():
     """Get, store and render results based on user keyword search."""
 
@@ -46,22 +53,28 @@ def get_search_results():
 
     # IF queried, do NOT crawl, and return results
 
-    search_keywords = request.form.get('keywords').strip()
+    search_keywords = request.form.get("keywords")
 
-    matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
+    search_keywords = search_keywords.strip().lower()
 
-    if matching_query:
-        final_results = get_db_results(matching_query.query_id)
-    else: 
-        initial_results = get_crawl_results(search_keywords)
-        final_results = []
+    # matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
-        for item in initial_results:
+    # if matching_query:
+    #     final_results = get_db_results(matching_query.query_id)
+    # else: 
+    initial_results = get_crawl_results(search_keywords)
+    new_query_id = add_new_query(search_keywords)
+    print "New query added!"
+    
+    final_results = []
 
-            new_dict = get_item_details(item)
-            rank = item['rank']
-            add_new_book(search_keywords, new_dict, rank)
-            final_results.append(new_dict)
+    for item in initial_results:
+
+        new_dict = get_item_details(item)
+        rank = item['rank']
+        new_dict['rank'] = rank
+        add_new_book(new_query_id, new_dict, rank)
+        final_results.append(new_dict)
 
     return render_template("searchresults.html", list=final_results)
 

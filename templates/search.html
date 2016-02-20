@@ -2,11 +2,11 @@
 {% block content %}
 
 <div class="row">
-  <form>
+  <form action="/results" method="POST">
     <div class="form-group row">
-      <label for="keywords" class="form-control-label sr-only">Your Zipcode</label>
+      <label for="keywords" class="form-control-label sr-only">Keyword Search</label>
       <div class="col-sm-offset-2 col-sm-8">
-        <input type="text" class="form-control" id="keywords" placeholder="Search by Title / Author / ISBN">
+        <input type="text" class="form-control" id="keywords" name="keywords" placeholder="Search by Title / Author / ISBN">
       </div>
     </div>
     <div class="row col-sm-offset-5 col-sm-2">

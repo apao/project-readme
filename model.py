@@ -49,7 +49,7 @@ class Book(db.Model):
     worldcaturl = db.Column(db.String(256), nullable=False)
     title = db.Column(db.String(128), nullable=False)
     publisher = db.Column(db.String(128), nullable=False)
-    page_count = db.Column(db.Integer, nullable=True)
+    page_count = db.Column(db.String(10), nullable=True)
     summary = db.Column(db.String(5000), nullable=True)
     coverurl = db.Column(db.String(256), nullable=False)
    
