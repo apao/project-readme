@@ -7,9 +7,9 @@ from flask_debugtoolbar import DebugToolbarExtension
 
 from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db
 
-from tempmvp import get_crawl_results, get_item_details
+from tempmvp import get_crawl_results, get_item_details, get_sccl_availability
 
-from dbfunctions import get_db_results, add_new_book, add_new_query
+from dbfunctions import get_db_results, add_new_book, add_new_query, get_db_book_details
 
 
 app = Flask(__name__)
@@ -57,26 +57,46 @@ def get_search_results():
 
     search_keywords = search_keywords.strip().lower()
 
-    # matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
+    matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
-    # if matching_query:
-    #     final_results = get_db_results(matching_query.query_id)
-    # else: 
-    initial_results = get_crawl_results(search_keywords)
-    new_query_id = add_new_query(search_keywords)
-    print "New query added!"
-    
-    final_results = []
+    if matching_query:
+        print "Matching query found!"
+        final_results = get_db_results(matching_query.query_id)
+    else: 
+        initial_results = get_crawl_results(search_keywords)
+        new_query_id = add_new_query(search_keywords)
+        print "New query added!"
+        
+        final_results = []
 
-    for item in initial_results:
+        for item in initial_results:
 
-        new_dict = get_item_details(item)
-        rank = item['rank']
-        new_dict['rank'] = rank
-        add_new_book(new_query_id, new_dict, rank)
-        final_results.append(new_dict)
+            new_dict = get_item_details(item)
+            rank = item['rank']
+            new_dict['rank'] = rank
+            new_book_id = add_new_book(new_query_id, new_dict, rank)
+            new_dict['bookid'] = new_book_id
+            final_results.append(new_dict)
 
     return render_template("searchresults.html", list=final_results)
+
+
+@app.route('/details/<int:bookid>')
+def item_details(bookid):
+    """Show details about an item."""
+
+    book_details = get_db_book_details(bookid)
+    isbn13_list = book_details['ISBN-13']
+
+    for isbn13 in isbn13_list:
+        avail_dict_isbn_key = get_sccl_availability(isbn13)
+        avail_dict_to_evaluate = avail_dict_isbn_key.values()[0]
+        if avail_dict_to_evaluate != 'Item Not Found':
+            return render_template("bookdetails.html", dictionary=book_details, avail_list=avail_dict_to_evaluate)
+        else:
+            continue
+
+    return render_template("bookdetails.html", dictionary=book_details, avail_list=[])
 
 
 @app.route('/about')

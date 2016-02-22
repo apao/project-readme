@@ -11,9 +11,9 @@
             <img src="{{ dict_item.get('coverurl') }}" class="img-responsive" alt="cover for {{ dict_item.get('title') }}">
           </td>
           <td class="col-xs-12 col-sm-4">
-            <div class="row title">
+            <a href="/details/{{ dict_item.get('bookid') }}"><div class="row title">
                 {{ dict_item.get('title') }}
-            </div>
+            </div></a>
             <div class="row author">
                 {{ dict_item.get('author')|join(', ') }}
             </div>

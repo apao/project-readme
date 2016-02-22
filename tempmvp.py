@@ -1,4 +1,4 @@
-# import os
+import os
 import requests
 import urllib
 # from bs4 import BeautifulSoup as bs
@@ -16,6 +16,10 @@ SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=sm
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
 SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com/item/show_circulation/"
 SCCL_AVAILABILITY_URL_JSONEND = ".json"
+SFPL_SEARCH_URL_BEG = "https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
+SFPL_SEARCH_URL_END = "&commit=Search"
+SFPL_AVAILABILITY_URL_BEG = "https://sfpl.bibliocommons.com"
+SFPL_AVAILABILITY_URL_END = ".json?search_scope=CAL-SFPL"
 OPEN_LIBRARY_COVER_URL = "http://covers.openlibrary.org/b/isbn/"
 OPEN_LIBRARY_SMALL_IMG_END = "-S.jpg"
 OPEN_LIBRARY_MED_IMG_END = "-M.jpg"
@@ -329,6 +333,47 @@ def get_isbn_by_url(dict_of_item):
     return dict_of_isbns_with_url_key
 
 
+def get_goodreads_info_by_isbn13(isbn13):
+    """Provided an ISBN13, get ratings and review count info from goodreads."""
+
+    goodreads_key = os.environ['GOODREADS_API_KEY']
+    url = "https://www.goodreads.com/book/isbn"
+    payload = dict(key=goodreads_key, isbn=isbn13)
+    print isbn13
+    
+    goodreads_page = requests.get(url, params=payload)
+    pq_goodreads_page = pq(goodreads_page.content)
+
+    pq_book = pq_goodreads_page('book').eq(0)
+    
+    pq_work = pq_goodreads_page('book').eq(0)('work').eq(0)
+
+    inner_dict = {}
+    # final_dict = {}
+    inner_dict['goodreads_work_id'] = pq_work('id').text()
+    inner_dict['goodreads_rating'] = float(pq_book.children('average_rating').text() or 0.0)
+    inner_dict['goodreads_ratings_count'] = int(pq_work('ratings_count').text() or 0)
+    inner_dict['goodreads_review_count'] = int(pq_work('reviews_count').text() or 0)
+
+    # TODO mtai - Add isbn13 as a field to inner_dict
+    # final_dict[isbn13] = inner_dict
+    inner_dict['isbn13'] = isbn13
+    final_dict = inner_dict
+
+    # goodreads_avg_rating = pq_book.children('average_rating').text()
+    # goodreads_ratings_count = pq_work('ratings_count').text()
+    # goodreads_work_id = pq_work('id').text()
+    # goodreads_review_count = pq_work('reviews_count').text()
+
+    # final_dict = dict(isbn13=isbn13, 
+    #                   goodreads_work_id=goodreads_work_id, 
+    #                   goodreads_rating=goodreads_avg_rating,
+    #                   goodreads_ratings_count=goodreads_ratings_count,
+    #                   goodreads_review_count=goodreads_review_count)
+
+    return final_dict
+
+
 def get_book_details_by_url(dict_of_item):
     """Provided one item's dictionary results from search_for_books(keywords),
     returns full book details for database for that item by the worldcat URL of its items details page."""
@@ -439,6 +484,13 @@ def get_book_details_by_url(dict_of_item):
     # cover_url_list = [OPEN_LIBRARY_COVER_URL+isbn13+OPEN_LIBRARY_MED_IMG_END for isbn13 in isbn13_list]
     coverurl = dict_of_item['coverurl']
 
+    # GOODREADS INFO
+    isbn_to_goodreads_list = [get_goodreads_info_by_isbn13(isbn13) for isbn13 in isbn13_list]
+
+    # TODO - Simplify k.values()[0] issue and sorted[0].keys()[0]
+    # sortedlist = list(sorted(isbn_to_goodreads_list, key=lambda k: int(k.values()[0]['goodreads_ratings_count'])))
+    # lead_isbn13_by_ratings_count = sortedlist[0].keys()[0]
+
     # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
     book_details_dict['worldcaturl'] = url
     book_details_dict['title'] = title
@@ -448,9 +500,10 @@ def get_book_details_by_url(dict_of_item):
     book_details_dict['coverurl'] = coverurl
     book_details_dict['format'] = format
     book_details_dict['summary'] = summary
+    book_details_dict['isbn_to_goodreads_list'] = isbn_to_goodreads_list
+    # book_details_dict['isbn13_lead_by_goodreads_ratings_count'] = lead_isbn13_by_ratings_count
 
     return book_details_dict
-
 
 
 def get_isbns_from_urls_list(list_of_dicts):
@@ -605,6 +658,63 @@ def get_sccl_availability(isbn):
     availabilities_for_isbn[isbn] = full_list_of_branch_avails
 
     return availabilities_for_isbn
+
+
+def get_sfpl_availability(isbn):
+    """Given an ISBN, provides availability for an item in the San Francisco Public Library System."""
+
+    # https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=9780062349026&commit=Search
+    # https://sfpl.bibliocommons.com/item/show_circulation/3011348093.json?search_scope=CAL-SFPL
+
+    full_list_of_branch_avails = []
+
+    # requests.get the sccl search page using isbn
+    # turn SCCl into a templated string, {}
+    sfpl_search_url = SFPL_SEARCH_URL_BEG + str(isbn) + SFPL_SEARCH_URL_END
+
+    # requests.get the contents of the page and convert to pq object
+    page = requests.get(sfpl_search_url)
+    pq_page = pq(page.content)
+
+    # find the sccl id no for the isbn on the page by css selector
+    availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+
+    if not availability_string:
+        return full_list_of_branch_avails
+
+    availability_string = availability_string.replace('?', '.json?')
+
+    # with the sccl_id_num, get the sccl availability json
+    sfpl_avail_url = SFPL_AVAILABILITY_URL_BEG + availability_string
+
+    avail_page = requests.get(sfpl_avail_url)
+    json_avail_page = json.loads(avail_page.text)
+    html_section_only = json_avail_page["html"]
+    
+    pq_html_section = pq(html_section_only)
+
+    # find table rows that are not under <thead> tags
+    non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+
+    for tr in non_thead_tr_list:
+        list_of_status_details = []
+        dict_of_status_details = {}
+        for td in tr.find('td').items():
+            list_of_status_details.append(td.text())
+        branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
+        if len(branch_name_and_copies) == 1:
+            branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+        else:
+            branch_name_and_copies[1] = branch_name_and_copies[1][:-1]  # Num of copies without parens
+       
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+        dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+        dict_of_status_details['branch_section'] = list_of_status_details[1]
+        dict_of_status_details['call_no'] = list_of_status_details[2]
+        dict_of_status_details['status'] = list_of_status_details[3]
+        full_list_of_branch_avails.append(dict_of_status_details)
+
+    return full_list_of_branch_avails
 
 
 def get_isbn13_from_dict(dict_for_item):

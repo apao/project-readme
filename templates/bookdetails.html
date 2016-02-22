@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="col-xs-12 row col-sm-10 col-sm-offset-1">
+  <div class="panel panel-default">
+    <div class="panel-heading title" id="{{ dictionary.get('bookid') }}">
+      <h1 class="panel-title">{{ dictionary.title|title }}</h1>
+      by {{ dictionary.get('author')|join(', ') }}
+    </div>
+    <div class="panel-body">
+      <div class="row details">
+      <!-- BEGIN LEFT COLUMN -->
+      <div class="col-md-3">
+        <div class="row coverimg">
+          <img src="{{ dictionary.get('coverurl') }}" class="img-responsive" alt="cover for {{ dictionary.get('title') }}">
+        </div>
+        <div class="row goodreadsinfo">
+          Goodreads:<br>
+          {{ dictionary.get('goodreads_info').goodreads_rating }} | {{ dictionary.get('goodreads_info').goodreads_ratings_count }} ratings
+        </div>
+        <div class="row publisher">
+            {{ dictionary.get('publisher') }}
+        </div>
+        <div class="row format">
+            {{ dictionary.get('format') }}
+        </div>
+        {% if dictionary.get('page_count') %}
+        <div class="row pagecount">
+            {{ dictionary.get('page_count') }} pages
+        </div>
+        {% endif %}
+      </div>
+      <!-- END LEFT COLUMN -->
+
+      <!-- BEGIN RIGHT COLUMN -->
+      <div class="col-md-9">
+        <div class="row summary">
+            <h3>Summary</h3>
+            {{ dictionary.get('summary') }}
+        </div>
+        <div class="row availability">
+          <h3>Library Availability</h3>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <tr>
+                <th>Library System</th>
+                <th>Branch</th>
+                <th>Status</th>
+                <th>Section</th>
+                <th>Call No.</th>
+              </tr>
+              {% for avail_dict in avail_list %}
+              <tr>
+                <td>SCCL</td>
+                <td>{{ avail_dict.branch_name }}</td>
+                <td>{{ avail_dict.status }}</td>
+                <td>{{ avail_dict.branch_section }}</td>
+                <td>{{ avail_dict.call_no }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="0">No Library Availability Found</td>
+              </tr>
+              {% endfor %} 
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- END RIGHT COLUMN -->
+      </div>
+    </div> <!-- END DETAILS -->
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

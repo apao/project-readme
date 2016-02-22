@@ -47,7 +47,7 @@ class Book(db.Model):
 
     book_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     worldcaturl = db.Column(db.String(256), nullable=False)
-    title = db.Column(db.String(128), nullable=False)
+    title = db.Column(db.String(500), nullable=False)
     publisher = db.Column(db.String(128), nullable=False)
     page_count = db.Column(db.String(10), nullable=True)
     summary = db.Column(db.String(5000), nullable=True)
@@ -60,7 +60,7 @@ class Book(db.Model):
     @classmethod
     def get_book_by_id(cls, book_id):
 
-        book = Book.query.filter_by(id=book_id).first()
+        book = Book.query.filter_by(book_id=book_id).first()
 
         return book
 
@@ -97,6 +97,7 @@ class ISBN13(db.Model):
     isbn13_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
     isbn13 = db.Column(db.String(20), nullable=False)
+    lead_isbn13_by_gr_ratings_count = db.Column(db.Boolean, nullable=True, default=False)
 
     book = db.relationship('Book', backref=db.backref('isbn13s', order_by=isbn13_id))
 
@@ -166,13 +167,14 @@ class GoodreadsInfo(db.Model):
     __tablename__ = "goodreadsinfo"
 
     goodreadsinfo_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
-    goodreads_id = db.Column(db.String(50), nullable=False)
+    isbn13_id = db.Column(db.Integer, db.ForeignKey('isbn13s.isbn13_id'), nullable=False)
+    goodreads_work_id = db.Column(db.String(50), nullable=False)
     goodreads_rating = db.Column(db.Float, nullable=True)
+    goodreads_ratings_count = db.Column(db.Integer, nullable=True)
     goodreads_review_count = db.Column(db.Integer, nullable=True)
     goodreads_review_text = db.Column(db.String(10000), nullable=True)
 
-    book = db.relationship('Book', backref=db.backref('goodreadsinfo', order_by=goodreadsinfo_id))
+    isbn13 = db.relationship('ISBN13', backref=db.backref('goodreadsinfo', order_by=goodreadsinfo_id))
 
 
 class LibrarySystem(db.Model):
@@ -328,3 +330,6 @@ if __name__ == "__main__":
     from server import app
     connect_to_db(app)
     print "Connected to DB."
+
+    import tempmvp
+    avail_list = tempmvp.get_sfpl_availability("9780062349026")

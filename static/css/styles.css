@@ -5,3 +5,16 @@ body {
     -o-background-size: cover; 
     background-size: cover; 
      }
+
+.panel-body {
+    padding: 2em;
+}
+
+.panel-heading h1 {
+    font-size: xx-large;
+}
+
+.summary h3 {
+    font-size: medium;
+    padding-top: 0;
+}
