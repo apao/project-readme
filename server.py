@@ -89,9 +89,9 @@ def item_details(bookid):
     isbn13_list = book_details['ISBN-13']
 
     for isbn13 in isbn13_list:
-        avail_dict_isbn_key = get_sccl_availability(isbn13)
-        avail_dict_to_evaluate = avail_dict_isbn_key.values()[0]
-        if avail_dict_to_evaluate != 'Item Not Found':
+        # avail_dict_isbn_key = get_sccl_availability(isbn13)
+        avail_dict_to_evaluate = get_sccl_availability(isbn13)
+        if avail_dict_to_evaluate:
             return render_template("bookdetails.html", dictionary=book_details, avail_list=avail_dict_to_evaluate)
         else:
             continue

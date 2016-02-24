@@ -1,6 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
 
+<style>
+    .mapboxgl-popup {
+        max-width: 400px;
+        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    }
+
+    .marker-title {
+        font-weight: 700;
+    }
+</style>
+
 <div class="col-xs-12 row col-sm-10 col-sm-offset-1">
   <div class="panel panel-default">
     <div class="panel-heading title" id="{{ dictionary.get('bookid') }}">
@@ -40,6 +51,9 @@
         </div>
         <div class="row availability">
           <h3>Library Availability</h3>
+          <div class="row map">
+            <div id='map'></div>
+          </div>
           <div class="table-responsive">
             <table class="table table-hover">
               <tr>

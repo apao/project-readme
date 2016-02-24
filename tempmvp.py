@@ -12,19 +12,48 @@ WORLDCAT_STANDARD_URL = "http://www.worldcat.org"
 WORLDCAT_SEARCH_URL = "http://www.worldcat.org/search?q="
 WORLDCAT_FILTER_LANG_EN_PRINT_ONLY = "&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
 WORLDCAT_FILTER_LANG_EN_EBOOKS_ONLY = "&fq=%20(%28x0%3Abook+x4%3Adigital%29)%20>%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
+
 SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
 SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com/item/show_circulation/"
 SCCL_AVAILABILITY_URL_JSONEND = ".json"
+
 SFPL_SEARCH_URL_BEG = "https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SFPL_SEARCH_URL_END = "&commit=Search"
 SFPL_AVAILABILITY_URL_BEG = "https://sfpl.bibliocommons.com"
 SFPL_AVAILABILITY_URL_END = ".json?search_scope=CAL-SFPL"
+
+SMPLIBRARY_SEARCH_URL_BEG = "https://smplibrary.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
+SMPLIBRARY_SEARCH_URL_END = "&commit=Search"
+SMPLIBRARY_AVAILABILITY_URL_BEG = "https://smplibrary.bibliocommons.com"
+
+SMCL_SEARCH_URL_BEG = "https://smcl.bibliocommons.com/search?locale=en-US&t=smart&q="
+SMCL_AVAILABILITY_URL_BEG = "https://smcl.bibliocommons.com"
+
 OPEN_LIBRARY_COVER_URL = "http://covers.openlibrary.org/b/isbn/"
 OPEN_LIBRARY_SMALL_IMG_END = "-S.jpg"
 OPEN_LIBRARY_MED_IMG_END = "-M.jpg"
 OPEN_LIBRARY_LRG_IMG_END = "-L.jpg"
 HTTP_URL = "http:"
+
+campbell = { 'branch_name': 'Campbell',
+             'branch_zipcode': '95008',
+             'branch_phone': '(408) 866-1991',
+             'branch_public_access': '',
+             'branch_card_policy': '',
+             'branch_overdrive_status': '',
+             'branch_address': '',
+             'branch_geo': ''
+            }   
+
+    # sys_id = db.Column(db.Integer, db.ForeignKey('librarysystems.sys_id'), nullable=False)
+    # branch_name = db.Column(db.String(100), nullable=False)
+    # branch_zipcode = db.Column(db.String(15), nullable=False)
+    # branch_public_access = db.Column(db.String(100), nullable=False)
+    # branch_card_policy = db.Column(db.String(100), nullable=False)
+    # branch_overdrive_status = db.Column(db.String(50), nullable=False)
+    # branch_address = db.Column(db.String(100), nullable=False)
+    # branch_geo = db.Column(db.String(500), nullable=False)
 
 
 # =============================================
@@ -355,8 +384,6 @@ def get_goodreads_info_by_isbn13(isbn13):
     inner_dict['goodreads_ratings_count'] = int(pq_work('ratings_count').text() or 0)
     inner_dict['goodreads_review_count'] = int(pq_work('reviews_count').text() or 0)
 
-    # TODO mtai - Add isbn13 as a field to inner_dict
-    # final_dict[isbn13] = inner_dict
     inner_dict['isbn13'] = isbn13
     final_dict = inner_dict
 
@@ -615,15 +642,10 @@ def get_sccl_availability(isbn):
     # find the sccl id no for the isbn on the page by css selector
     availability_string = pq_page('a.circInfo.value.underlined').attr('href')
 
-    if availability_string:
-        regex_search_result = re.search('/(\w*)\?', availability_string)
-        if regex_search_result:
-            if regex_search_result.group(1):
-                regex_match = regex_search_result.group(1)               
-        sccl_id_num = regex_match  # slices off the leading / and trailing ?
-    else:
-        availabilities_for_isbn[isbn] = "Item Not Found"
-        return availabilities_for_isbn
+    if not availability_string:
+        return full_list_of_branch_avails
+
+    availability_string = availability_string.replace('?', '.json?')
 
     # with the sccl_id_num, get the sccl availability json
     sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + sccl_id_num + SCCL_AVAILABILITY_URL_JSONEND
@@ -655,9 +677,7 @@ def get_sccl_availability(isbn):
         dict_of_status_details['status'] = list_of_status_details[3]
         full_list_of_branch_avails.append(dict_of_status_details)
 
-    availabilities_for_isbn[isbn] = full_list_of_branch_avails
-
-    return availabilities_for_isbn
+    return full_list_of_branch_avails
 
 
 def get_sfpl_availability(isbn):
@@ -669,14 +689,14 @@ def get_sfpl_availability(isbn):
     full_list_of_branch_avails = []
 
     # requests.get the sccl search page using isbn
-    # turn SCCl into a templated string, {}
+    # turn SFPL into a templated string, {}
     sfpl_search_url = SFPL_SEARCH_URL_BEG + str(isbn) + SFPL_SEARCH_URL_END
 
     # requests.get the contents of the page and convert to pq object
     page = requests.get(sfpl_search_url)
     pq_page = pq(page.content)
 
-    # find the sccl id no for the isbn on the page by css selector
+    # find the href with sfpl id no. on the page by css selector
     availability_string = pq_page('a.circInfo.value.underlined').attr('href')
 
     if not availability_string:
@@ -690,7 +710,7 @@ def get_sfpl_availability(isbn):
     avail_page = requests.get(sfpl_avail_url)
     json_avail_page = json.loads(avail_page.text)
     html_section_only = json_avail_page["html"]
-    
+
     pq_html_section = pq(html_section_only)
 
     # find table rows that are not under <thead> tags
@@ -715,6 +735,62 @@ def get_sfpl_availability(isbn):
         full_list_of_branch_avails.append(dict_of_status_details)
 
     return full_list_of_branch_avails
+
+
+def get_smcl_availability(isbn):
+    """Given an ISBN, provides availability for an item in the San Mateo County Library system."""
+
+    full_list_of_branch_avails = []
+
+    # requests.get the smcl search page using isbn
+    smcl_search_url = SMCL_SEARCH_URL_BEG + str(isbn)
+
+    # requests.get the contents of the page and convert to pq object
+    page = requests.get(smcl_search_url)
+    pq_page = pq(page.content)
+
+    # find the availability href by css selector
+    availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+
+    if not availability_string:
+        return full_list_of_branch_avails
+
+    availability_string = availability_string.replace('?', '.json?')
+
+    # with the href, get the sccl availability json
+    smcl_avail_url = SMCL_AVAILABILITY_URL_BEG + availability_string
+
+    avail_page = requests.get(smcl_avail_url)
+    json_avail_page = json.loads(avail_page.text)
+    html_section_only = json_avail_page["html"]
+    
+    pq_html_section = pq(html_section_only)
+
+    # find table rows that are not under <thead> tags
+    non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+
+    for tr in non_thead_tr_list:
+        list_of_status_details = []
+        dict_of_status_details = {}
+        for td in tr.find('td').items():
+            list_of_status_details.append(td.text())
+        branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
+        if len(branch_name_and_copies) == 1:
+            branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+        else:
+            branch_name_and_copies[1] = branch_name_and_copies[1][:-1]  # Num of copies without parens
+       
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+        dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+        dict_of_status_details['branch_section'] = list_of_status_details[1]
+        dict_of_status_details['call_no'] = list_of_status_details[2]
+        dict_of_status_details['status'] = list_of_status_details[3]  # 'CHECK SHELF' MEANS AVAILABLE
+        full_list_of_branch_avails.append(dict_of_status_details)
+
+    return full_list_of_branch_avails
+
+
+
 
 
 def get_isbn13_from_dict(dict_for_item):
@@ -780,6 +856,17 @@ def get_item_details(item_dict):
     details = get_book_details_by_url(item_dict)
     return details
 
+
+# =============================================
+# FUNCTIONS FOR GEOCODING AND GEOLOCATION
+# =============================================
+
+# https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=YOUR_API_KEY
+
+def get_smcl_branches_hours(url):
+    """Given the SMCL hours and locations page, grab the information."""
+
+    d = pq(url='http://www.smcl.org/en/content/hours-and-locations')
 
 
 

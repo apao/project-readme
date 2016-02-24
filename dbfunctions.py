@@ -81,7 +81,7 @@ def add_new_book(queryid, newdict, rank):
         isbn13 = goodreads_map['isbn13']
 
         isbn13_id_for_item = ISBN13.query.filter_by(isbn13=isbn13).first().isbn13_id
-        new_goodreadsinfo = GoodreadsInfo(isbn13_id=isbn13_id_for_item ,
+        new_goodreadsinfo = GoodreadsInfo(isbn13_id=isbn13_id_for_item,
                                           goodreads_work_id=goodreads_map['goodreads_work_id'],
                                           goodreads_rating=goodreads_map['goodreads_rating'],
                                           goodreads_ratings_count=goodreads_map['goodreads_ratings_count'],
