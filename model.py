@@ -182,7 +182,7 @@ class LibrarySystem(db.Model):
 
     __tablename__ = "librarysystems"
 
-    sys_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    sys_id = db.Column(db.Integer, primary_key=True)
     sys_name = db.Column(db.String(50), nullable=False)
 
 
@@ -196,10 +196,11 @@ class LibraryBranch(db.Model):
     branch_name = db.Column(db.String(100), nullable=False)
     branch_zipcode = db.Column(db.String(15), nullable=False)
     branch_public_access = db.Column(db.String(100), nullable=False)
-    branch_card_policy = db.Column(db.String(100), nullable=False)
-    branch_overdrive_status = db.Column(db.String(50), nullable=False)
+    branch_card_policy = db.Column(db.String(500), nullable=False)
+    branch_overdrive_status = db.Column(db.String(50), nullable=True)
     branch_address = db.Column(db.String(100), nullable=False)
     branch_geo = db.Column(db.String(500), nullable=False)
+    branch_phone = db.Column(db.String(50), nullable=True)
 
     library_system = db.relationship('LibrarySystem', backref=db.backref('librarybranches', order_by=branch_id))
 
@@ -269,45 +270,7 @@ class QueryBook(db.Model):
 
 
 
-    # <entry>
-    #     <author>
-    #         <name>Medina, John, 1956-</name>
-    #     </author>
-    #     <title>Brain rules : 12 principles for surviving and thriving at work, home, and school</title>
-    #     <link href="http://worldcat.org/oclc/184871778"/>
-    #     <id>http://worldcat.org/oclc/184871778</id>
-    #     <updated>2015-07-09T23:26:07Z</updated>
-    #     <summary>In Brain Rules, Dr. John Medina, a molecular biologist, shares his lifelong interest in how the brain sciences might influence the way we teach our children and the way we work. In each chapter, he describes a brain rule--what scientists know for sure about how our brains work--and then offers transformative ideas for our daily lives. The Brain Rules DVD is a lively tour of the 12 Brain Rules [with] clips from all 12 Brain Rules, bonus material, and MP3s from the Brain Rules audio book--From http://www.brainrulesbook.com.</summary>
-    #     <dc:identifier>urn:ISBN:0979777704</dc:identifier>
-    #     <dc:identifier>urn:ISBN:9780979777707</dc:identifier>
-    #     <dc:identifier>urn:ISBN:9780979777714</dc:identifier>
-    #     <dc:identifier>urn:ISBN:0979777712</dc:identifier>
-    #     <dc:identifier>urn:ISBN:9780979777745</dc:identifier>
-    #     <dc:identifier>urn:ISBN:0979777747</dc:identifier>
-    #     <dc:identifier>urn:LCCN:2008921102</dc:identifier>
-    #     <oclcterms:recordIdentifier>184871778</oclcterms:recordIdentifier>
-    # </entry>
 
-
-
-
-
-# class Rating(db.Model):
-#     """Rating on ratings website."""
-
-#     __tablename__ = "ratings"
-
-#     rating_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-#     movie_id = db.Column(db.Integer, db.ForeignKey('movies.movie_id'), nullable=False)
-#     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-#     score = db.Column(db.Integer, nullable=False)
-
-#     movie = db.relationship('Movie', backref=db.backref('ratings', order_by=rating_id))
-#     user = db.relationship('User', backref=db.backref('ratings', order_by=rating_id))
-
-#     def __repr__(self):
-#         """Represents rating object"""
-#         return "<Rating ID: %d, Movie ID: %d, User ID: %d, Score: %d>" % (self.rating_id, self.movie_id, self.user_id, self.score)
 
 
 

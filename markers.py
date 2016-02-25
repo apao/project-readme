@@ -1,76 +1,51 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Chewy">
-    <link href="/static/css/styles.css" type="text/css" rel="stylesheet">
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.14.2/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.14.2/mapbox-gl.css' rel='stylesheet' />
-    <style>
-        #map { top:0; bottom:0; height:500px; width:95%; }
-    </style>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>project readme</title>
-</head>
+import tempmvp
 
-<body>
-    <nav class="navbar">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
-            <span class="glyphicon glyphicon-menu-hamburger"></span>
-          </button>  
-          <a class="navbar-brand" href="">
-            <i class="fa fa-book"></i>
-          </a>
-        </div> <!-- navbar-header -->
-        <div class="collapse navbar-collapse" id="myNavbar">
-            <ul class="nav navbar-nav navbar-left">
-            <li role="presentation" class="active"><a href="#">Home</a></li>
-            <li role="presentation"><a href="/about">About project readme</a></li>
-            <li role="presentation"><a href="/bookrecs">Book Recommendations</a></li>
-            <li role="presentation"><a href="/contact">Contact</a></li>
-          </ul>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="/register">Register</a></li>
-            <li><a href="/login">Log In</a></li>
-          </ul>
-        </div> <!-- collapse navbar -->
-      </div> <!-- container-fluid -->
-    </nav>
+def create_markers_by_item_avail(isbn):
+    """Create markers for Mapbox map based on searching isbn for library availability."""
+
+    feature_dict = {}
+    sccl_avail = tempmvp.get_sccl_availability(isbn)
+
+    for avail in sccl_avail:
+        if "Due" not in avail['status']:
+            avail_dict = dict(
+                                  "type": "Feature",
+                                  "properties": {
+                                    "description": "<div class=\"marker-title\">%s</div><p>%s | %s | %s</p>",
+                                    "marker-symbol": %s
+                                  },
+                                  "geometry": {
+                                    "type": "Point",
+                                    "coordinates": [%f,%f]
+                                  }
+                              ) % ('Branch', 'Test', 'TestA', 'TestB', 'library', -77.007481, 38.876516)
 
 
-    <div class="container container-fluid">
-      {% block content %}
-      {% endblock %}   
-    </div> <!-- container -->
+def normalize_sccl_availability(list_of_dicts):
+    # branch_name
+    # call_no
+    # status
+    # total_num_of_copies
+    # long_lat_of_branch (get from hardcoded dictionary or database)
+    pass
+
+def normalize_sfpl_availability(list_of_dicts):
+    pass
+
+def normalize_smcl_availability(list_of_dicts):
+    pass
 
 
 
 
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+        dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+        dict_of_status_details['branch_section'] = list_of_status_details[1]
+        dict_of_status_details['call_no'] = list_of_status_details[2]
+        dict_of_status_details['status'] = list_of_status_details[3]
 
 
-<!-- <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3">
-</div> -->
-
-
-
-
-
-
-
-
-
-
-    <!-- You need this in order to use JS-based components in the 
-    further study. Leave this at the bottom and code above it. -->
-
-    <script src="http://code.jquery.com/jquery.js"></script>
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhbyIsImEiOiJjaWwwaGhqMm4xdjB1dXltM2NhZGl5NHY2In0.PlgVAjJ-m_7BunI7VwjPGA';
-    var markers = {
+markers = {
         "type": "FeatureCollection",
         "features": [{
             "type": "Feature",
@@ -85,12 +60,12 @@
         }, {
             "type": "Feature",
             "properties": {
-                "description": "<div class=\"marker-title\">Library Branch</div><p>Test | TestA | TestB</p>",
-                "marker-symbol": "library"
+                "description": "<div class=\"marker-title\">Mad Men Season Five Finale Watch Party</div><p>Head to Lounge 201 (201 Massachusetts Avenue NE) Sunday for a <a href=\"http://madmens5finale.eventbrite.com/\" target=\"_blank\" title=\"Opens in a new window\">Mad Men Season Five Finale Watch Party</a>, complete with 60s costume contest, Mad Men trivia, and retro food and drink. 8:00-11:00 p.m. $10 general admission, $20 admission and two hour open bar.</p>",
+                "marker-symbol": "theatre"
             },
             "geometry": {
                 "type": "Point",
-                "coordinates": [-121.945409,37.2882221]
+                "coordinates": [-77.003168, 38.894651]
             }
         }, {
             "type": "Feature",
@@ -162,84 +137,5 @@
                 "type": "Point",
                 "coordinates": [-77.007481, 38.876516]
             }
-        }, {
-            "type": "Feature",
-            "properties": {
-                "description": "<div class=\"marker-title\">Branch</div><p>Test | TestA | TestB</p>",
-                "marker-symbol": "library"
-            },
-            "geometry": {
-                "type": "Point",
-                "coordinates": [-77.007481, 38.877234]
-            }
         }]
     };
-
-    var map = new mapboxgl.Map({
-        container: 'map',
-        style: 'mapbox://styles/mapbox/streets-v8',
-        center: [-77.04, 38.907],
-        zoom: 11.15
-    });
-
-    map.on('style.load', function () {
-        // Add marker data as a new GeoJSON source.
-        map.addSource("markers", {
-            "type": "geojson",
-            "data": markers
-        });
-
-        // Add a layer showing the markers.
-        map.addLayer({
-            "id": "markers",
-            "interactive": true,
-            "type": "symbol",
-            "source": "markers",
-            "layout": {
-                "icon-image": "{marker-symbol}-15",
-                "icon-allow-overlap": true
-            }
-        });
-    });
-
-    var popup = new mapboxgl.Popup();
-
-    // When a click event occurs near a marker icon, open a popup at the location of
-    // the feature, with description HTML from its properties.
-    map.on('click', function (e) {
-        map.featuresAt(e.point, {
-            radius: 7.5, // Half the marker size (15px).
-            includeGeometry: true,
-            layer: 'markers'
-        }, function (err, features) {
-
-            if (err || !features.length) {
-                popup.remove();
-                return;
-            }
-
-            var feature = features[0];
-
-            // Popuplate the popup and set its coordinates
-            // based on the feature found.
-            popup.setLngLat(feature.geometry.coordinates)
-                .setHTML(feature.properties.description)
-                .addTo(map);
-        });
-    });
-
-    // Use the same approach as above to indicate that the symbols are clickable
-    // by changing the cursor style to 'pointer'.
-    map.on('mousemove', function (e) {
-        map.featuresAt(e.point, {
-            radius: 7.5, // Half the marker size (15px).
-            layer: 'markers'
-        }, function (err, features) {
-            map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
-        });
-    });
-    </script>
-
-</body>
-
-</html>

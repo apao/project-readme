@@ -12,10 +12,13 @@ from model import Format
 from model import BookFormat
 from model import Query
 from model import QueryBook
+from model import LibrarySystem
+from model import LibraryBranch
 
 from model import db
 # from server import app
 from datetime import datetime
+
 
 
 def add_new_query(keywords):

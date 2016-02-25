@@ -15,7 +15,7 @@ WORLDCAT_FILTER_LANG_EN_EBOOKS_ONLY = "&fq=%20(%28x0%3Abook+x4%3Adigital%29)%20>
 
 SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
-SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com/item/show_circulation/"
+SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com"
 SCCL_AVAILABILITY_URL_JSONEND = ".json"
 
 SFPL_SEARCH_URL_BEG = "https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
@@ -648,7 +648,7 @@ def get_sccl_availability(isbn):
     availability_string = availability_string.replace('?', '.json?')
 
     # with the sccl_id_num, get the sccl availability json
-    sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + sccl_id_num + SCCL_AVAILABILITY_URL_JSONEND
+    sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + availability_string
 
     avail_page = requests.get(sccl_avail_url)
     json_avail_page = json.loads(avail_page.text)
