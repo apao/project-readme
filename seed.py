@@ -42,25 +42,26 @@ def load_librarybranches():
 
     LibraryBranch.query.delete()
 
-    for row in open("data/libdata.txt"):
-        row = row.rstrip()
-        sys_id, branch_name, branch_zipcode, branch_public_access, \
-        branch_card_policy, branch_overdrive_status, branch_address, \
-        branch_geo, branch_phone = row.split("|")
+    with open("data/libdata.txt") as libdatafile:
+        for line in libdatafile:
+            line = line.rstrip()
+            sys_id, branch_name, branch_zipcode, branch_public_access, branch_card_policy, branch_overdrive_status, branch_address, branch_geo, branch_phone = line.split("|")
 
-        librarybranch = LibraryBranch(sys_id=sys_id,
-                                      branch_name=branch_name,
-                                      branch_zipcode=branch_zipcode,
-                                      branch_public_access=branch_public_access,
-                                      branch_card_policy=branch_card_policy,
-                                      branch_overdrive_status=branch_overdrive_status,
-                                      branch_address=branch_address,
-                                      branch_geo=branch_geo,
-                                      branch_phone=branch_phone)
+            librarybranch = LibraryBranch(sys_id=int(sys_id),
+                                          branch_name=branch_name,
+                                          branch_zipcode=branch_zipcode,
+                                          branch_public_access=branch_public_access,
+                                          branch_card_policy=branch_card_policy,
+                                          branch_overdrive_status=branch_overdrive_status,
+                                          branch_address=branch_address,
+                                          branch_geo=branch_geo,
+                                          branch_phone=branch_phone)
 
-        db.session.add(librarybranch)
+            db.session.add(librarybranch)
 
     db.session.commit()
+
+
 
 
 # def load_users():
@@ -164,10 +165,12 @@ def load_librarybranches():
 #     db.session.commit()
 
 
-# if __name__ == "__main__":
-#     connect_to_db(app)
-#
-#     # Import different types of data
-#     load_librarysystems()
-#     load_librarybranches()
-#     print "Load complete."
+if __name__ == "__main__":
+    connect_to_db(app)
+
+    db.create_all()
+
+    # Import different types of data
+    load_librarysystems()
+    load_librarybranches()
+    print "Load complete."

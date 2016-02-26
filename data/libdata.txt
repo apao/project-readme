@@ -1,7 +1,3 @@
-sys_id, branch_name, branch_zipcode, branch_public_access, \
-        branch_card_policy, branch_overdrive_status, branch_address, \
-        branch_geo, branch_phone = row.split("|")
-
 1|Campbell|95008|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|77 Harrison Avenue, Campbell, CA 95008|-121.945409,37.2882221|(408)866-1991
 1|Cupertino|95014|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|10800 Torre Avenue, Cupertino, CA 95014|-122.0309436,37.3178555|(408)446-1677
 1|Gilroy|95020|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|350 West Sixth Street, Gilroy, CA 95020|-121.5751149,37.0055707|(408)842-8207
@@ -10,9 +6,6 @@ sys_id, branch_name, branch_zipcode, branch_public_access, \
 1|Morgan Hill|95037|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|660 West Main Avenue, Morgan Hill, CA 95037|-121.6650826,37.1243116|(408)779-3196
 1|Saratoga|95070|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|13650 Saratoga Avenue, Saratoga, CA 95070|-122.0172937,37.2701203|(408)867-6126
 1|Woodland|94024|True|You must provide your date of birth and present a valid form of identification showing your picture, name, and proof of your current address to complete your registration.|True|1975 Grant Road, Los Altos, CA 94024|-122.0776387,37.3442441|(650)969-6030
-
-
-
 2|Atherton|94027|True|Visit any San Mateo County Library location to apply for a card.|True|2 Dinkelspiel Station Lane, Atherton, CA 94027|-122.196963,37.463303|(650)328-2422
 2|Belmont|94002|True|Visit any San Mateo County Library location to apply for a card.|True|1110 Alameda de las Pulgas, Belmont, CA 94002|-122.2951546,37.5087169|(650)591-8286
 2|Brisbane|94005|True|Visit any San Mateo County Library location to apply for a card.|True|250 Visitacion Avenue, Brisbane, CA 94005|-122.4059606,37.6828188|(415)467-2060
@@ -25,8 +18,6 @@ sys_id, branch_name, branch_zipcode, branch_public_access, \
 2|Portola Valley|94028|True|Visit any San Mateo County Library location to apply for a card.|True|765 Portola Road, Portola Valley, CA 94028|-122.2311893,37.3819854|(650)851-0560
 2|San Carlos|94070|True|Visit any San Mateo County Library location to apply for a card.|True|610 Elm Street, San Carlos, CA 94070|-122.2646153,37.5036724|(650)591-0341
 2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
-
-
 3|Anza|94121|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|550 37th Avenue, San Francisco, CA 94121|-122.4994062,37.7785276|(415)355-5717
 3|Bayview|94124|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|5075 3rd Street, San Francisco, CA 94124|-122.3933029,37.7325441|(415)355-5757
 3|Bernal Heights|94110|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|500 Cortland Avenue, San Francisco, CA 94110|,|(415)355-2810
@@ -35,26 +26,23 @@ sys_id, branch_name, branch_zipcode, branch_public_access, \
 3|Excelsior|94112|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|4400 Mission Street, San Francisco, CA 94112|-122.4354802,37.7271314|(415)355-2868
 3|Glen Park|94131|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|2825 Diamond Street, San Francisco, CA 94131|-122.435905,37.7339728|(415)355-2858
 3|Golden Gate Valley|94123|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1801 Green Street, San Francisco, CA 94123|-122.4311456,37.7968347|(415)355-5666
-3|Ingleside|94112|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1298 Ocean Avenue, San Francisco, CA 94112|,|(415)355-2898
-3|Main|94102|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|100 Larkin Street, San Francisco, CA 94102|,|(415)557-4400
-3|Marina|94123|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1890 Chestnut Street, San Francisco, CA 94123|,|(415)355-2823
-3|Merced|94132|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|155 Winston Drive, San Francisco, CA 94132|,|(415)355-2825
-3|Mission|94110|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|300 Bartlett Street, San Francisco, CA 94110|,|(415)355-2800
-3|Mission Bay|94158|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|960 4th Street, San Francisco, CA 94158|,|(415)355-2838
-3|Mobile Outreach Services|94108|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1135 Powell Street, San Francisco, CA 94|,|(415)355-
-3|Noe Valley|94114|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|451 Jersey Street, San Francisco, CA 94114|,|(415)355-5707
-3|North Beach|94133|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|850 Columbus Avenue, San Francisco, CA 94133|,|(415)355-5626
-3|Ocean View|94132|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|345 Randolph Street, San Francisco, CA 94132|,|(415)355-5615
-3|Ortega|94122|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|3223 Ortega Street, San Francisco, CA 94122|,|(415)355-5700
-3|Park|94117|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1833 Page Street, San Francisco, CA 94117|,|(415)355-5656
-3|Parkside|94116|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1200 Taraval Street, San Francisco, CA 94116|,|(415)355-5770
-3|Portola|94134|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|380 Bacon Street, San Francisco, CA 94134|,|(415)355-5660
-3|Potrero|94107|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1616 20th Street, San Francisco, CA 94107|,|(415)355-2822
-3|Presidio|94115|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|3150 Sacramento Street, San Francisco, CA 94115|,|(415)355-2880
-3|Richmond|94118|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|351 9th Avenue, San Francisco, CA 94118|,|(415)355-5600
-3|Sunset|94122|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1305 18th Avenue, San Francisco, CA 94122|,|(415)355-2808
-3|Visitacion Valley|94134|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|201 Leland Avenue, San Francisco, CA 94134|,|(415)355-2848
-3|West Portal|94127|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|190 Lenox Way, San Francisco, CA 94127|,|(415)355-2886
-3|Western Addition|94115|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1550 Scott Street, San Francisco, CA 94115|,|(415)355-5727
-
-
+3|Ingleside|94112|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1298 Ocean Avenue, San Francisco, CA 94112|-122.4584253,37.7241362|(415)355-2898
+3|Main|94102|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|100 Larkin Street, San Francisco, CA 94102|-122.4179549,37.7791198|(415)557-4400
+3|Marina|94123|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1890 Chestnut Street, San Francisco, CA 94123|-122.4363358,37.8013237|(415)355-2823
+3|Merced|94132|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|155 Winston Drive, San Francisco, CA 94132|-122.4766691,37.7267162|(415)355-2825
+3|Mission|94110|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|300 Bartlett Street, San Francisco, CA 94110|-122.422039,37.751988|(415)355-2800
+3|Mission Bay|94158|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|960 4th Street, San Francisco, CA 94158|-122.3953832,37.7753288|(415)355-2838
+3|Noe Valley|94114|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|451 Jersey Street, San Francisco, CA 94114|-122.4372976,37.7501956|(415)355-5707
+3|North Beach|94133|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|850 Columbus Avenue, San Francisco, CA 94133|-122.4154684,37.802584|(415)355-5626
+3|Ocean View|94132|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|345 Randolph Street, San Francisco, CA 94132|-122.4681837,37.7141425|(415)355-5615
+3|Ortega|94122|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|3223 Ortega Street, San Francisco, CA 94122|-122.5003497,37.7514189|(415)355-5700
+3|Park|94117|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1833 Page Street, San Francisco, CA 94117|-122.4532275,37.7703047|(415)355-5656
+3|Parkside|94116|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1200 Taraval Street, San Francisco, CA 94116|-122.4815187,37.74314|(415)355-5770
+3|Portola|94134|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|380 Bacon Street, San Francisco, CA 94134|-122.4085498,37.7271027|(415)355-5660
+3|Potrero|94107|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1616 20th Street, San Francisco, CA 94107|-122.399856,37.7601372|(415)355-2822
+3|Presidio|94115|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|3150 Sacramento Street, San Francisco, CA 94115|-122.4470807,37.7888561|(415)355-2880
+3|Richmond|94118|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|351 9th Avenue, San Francisco, CA 94118|-122.4702426,37.781848|(415)355-5600
+3|Sunset|94122|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1305 18th Avenue, San Francisco, CA 94122|-122.4784888,37.7633642|(415)355-2808
+3|Visitacion Valley|94134|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|201 Leland Avenue, San Francisco, CA 94134|-122.4100747,37.7124592|(415)355-2848
+3|West Portal|94127|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|190 Lenox Way, San Francisco, CA 94127|-122.4682286,37.7413117|(415)355-2886
+3|Western Addition|94115|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|1550 Scott Street, San Francisco, CA 94115|-122.4396918,37.7841138|(415)355-5727

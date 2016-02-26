@@ -196,7 +196,7 @@ class LibraryBranch(db.Model):
     branch_name = db.Column(db.String(100), nullable=False)
     branch_zipcode = db.Column(db.String(15), nullable=False)
     branch_public_access = db.Column(db.String(100), nullable=False)
-    branch_card_policy = db.Column(db.String(500), nullable=False)
+    branch_card_policy = db.Column(db.String(1000), nullable=False)
     branch_overdrive_status = db.Column(db.String(50), nullable=True)
     branch_address = db.Column(db.String(100), nullable=False)
     branch_geo = db.Column(db.String(500), nullable=False)
