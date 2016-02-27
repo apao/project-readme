@@ -675,6 +675,7 @@ def get_sccl_availability(isbn):
         dict_of_status_details['branch_section'] = list_of_status_details[1]
         dict_of_status_details['call_no'] = list_of_status_details[2]
         dict_of_status_details['status'] = list_of_status_details[3]
+        dict_of_status_details['sccl_search_url'] = sccl_search_url
         full_list_of_branch_avails.append(dict_of_status_details)
 
     return full_list_of_branch_avails
@@ -785,6 +786,7 @@ def get_smcl_availability(isbn):
         dict_of_status_details['branch_section'] = list_of_status_details[1]
         dict_of_status_details['call_no'] = list_of_status_details[2]
         dict_of_status_details['status'] = list_of_status_details[3]  # 'CHECK SHELF' MEANS AVAILABLE
+        dict_of_status_details['smcl_search_url'] = smcl_search_url
         full_list_of_branch_avails.append(dict_of_status_details)
 
     return full_list_of_branch_avails
@@ -866,7 +868,61 @@ def get_item_details(item_dict):
 def get_smcl_branches_hours(url):
     """Given the SMCL hours and locations page, grab the information."""
 
-    d = pq(url='http://www.smcl.org/en/content/hours-and-locations')
+    pass
+
+# =============================================
+# FUNCTIONS TO NORMALIZE EACH LIBRARY'S ITEM AVAILABILITY
+# =============================================
+
+def normalize_sccl_availability(dictlist):
+    """Return normalized availability to pass to javascript for map rendering."""
+
+    branch_dict = {}
+
+    for avail in dictlist:
+        current_branch = avail.get('branch_name')
+        current_call_num = avail.get('call_no')
+        current_branch_section = avail.get('branch_section')
+        current_num_of_copies = avail.get('num_of_copies')
+        current_url = avail.get('sccl_search_url')
+        branch_dict[current_branch] = branch_dict.get(current_branch, {})
+        branch_dict[current_branch]['sccl_where_to_find'] = branch_dict.get(current_branch).get('sccl_where_to_find', [])
+        branch_dict[current_branch]['sccl_search_url'] = current_url
+        if avail.get('status') == 'Available':
+            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+            branch_dict.get(current_branch).get('sccl_where_to_find').append(tuple([current_branch_section, current_call_num]))
+        elif "Due" in avail.get('status'):
+            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+        else:
+            continue
+
+    return branch_dict
+
+# normalize_sccl_availability(get_sccl_availability("9780439136358"))
+
+def normalize_smcl_availability(dictlist):
+    """Return normalized availability to pass to javascript for map rendering."""
+
+    branch_dict = {}
+
+    for avail in dictlist:
+        current_branch = avail.get('branch_name')
+        current_call_num = avail.get('call_no')
+        current_branch_section = avail.get('branch_section')
+        current_num_of_copies = avail.get('num_of_copies')
+        current_url = avail.get('smcl_search_url')
+        branch_dict[current_branch] = branch_dict.get(current_branch, {})
+        branch_dict[current_branch]['smcl_where_to_find'] = branch_dict.get(current_branch).get('smcl_where_to_find', [])
+        branch_dict[current_branch]['smcl_search_url'] = current_url
+        if avail.get('status') == 'CHECK SHELF':
+            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+            branch_dict.get(current_branch).get('smcl_where_to_find').append(tuple([current_branch_section, current_call_num]))
+        elif "Due" in avail.get('status'):
+            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+        else:
+            continue
+
+    return branch_dict
 
 
 
@@ -886,18 +942,22 @@ def get_smcl_branches_hours(url):
 
 
 
-if __name__ == '__main__':
-    # VERSION FOR TESTING ONLY LOOKING AT ONE RESULT - 4.5 seconds of processing
-    # urls = get_urls_by_search_keywords("brain rules")
-    # isbns = get_isbn_by_url(urls[0])
-    # avails = get_sccl_avail_for_item(isbns)
-    # pprint.pprint(avails)
 
-    # VERSION FOR TESTING ON FULL LIST OF 10 RESULTS - more than 18 seconds of processing
-    # >>> get_availabilities_for_list_of_books(get_isbns_from_urls_list(get_urls_by_search_keywords("brain rules")))
-    urls = get_urls_by_search_keywords("lean in")
-    isbns = get_isbns_from_urls_list(urls)
-    avails = get_availabilities_for_list_of_books(isbns)
-    pprint.pprint(avails)
+
+
+
+# if __name__ == '__main__':
+#     # VERSION FOR TESTING ONLY LOOKING AT ONE RESULT - 4.5 seconds of processing
+#     # urls = get_urls_by_search_keywords("brain rules")
+#     # isbns = get_isbn_by_url(urls[0])
+#     # avails = get_sccl_avail_for_item(isbns)
+#     # pprint.pprint(avails)
+#
+#     # VERSION FOR TESTING ON FULL LIST OF 10 RESULTS - more than 18 seconds of processing
+#     # >>> get_availabilities_for_list_of_books(get_isbns_from_urls_list(get_urls_by_search_keywords("brain rules")))
+#     urls = get_urls_by_search_keywords("lean in")
+#     isbns = get_isbns_from_urls_list(urls)
+#     avails = get_availabilities_for_list_of_books(isbns)
+#     pprint.pprint(avails)
 
 

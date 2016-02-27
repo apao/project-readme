@@ -5,11 +5,13 @@ from jinja2 import StrictUndefined
 from flask import Flask, render_template, redirect, request, flash, session, url_for
 from flask_debugtoolbar import DebugToolbarExtension
 
-from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db
+from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db, LibraryBranch, LibrarySystem
 
-from tempmvp import get_crawl_results, get_item_details, get_sccl_availability
+from tempmvp import get_crawl_results, get_item_details, get_sccl_availability, normalize_sccl_availability
 
 from dbfunctions import get_db_results, add_new_book, add_new_query, get_db_book_details
+
+import json
 
 
 app = Flask(__name__)
@@ -87,16 +89,67 @@ def item_details(bookid):
 
     book_details = get_db_book_details(bookid)
     isbn13_list = book_details['ISBN-13']
+    marker_list = []
 
     for isbn13 in isbn13_list:
-        # avail_dict_isbn_key = get_sccl_availability(isbn13)
-        avail_dict_to_evaluate = get_sccl_availability(isbn13)
-        if avail_dict_to_evaluate:
-            return render_template("bookdetails.html", dictionary=book_details, avail_list=avail_dict_to_evaluate)
+        norm_avail_dict = normalize_sccl_availability(get_sccl_availability(isbn13))
+        key_list = norm_avail_dict.keys()
+        for branch in key_list:
+            lib_branch_obj = LibraryBranch.query.filter_by(branch_name=branch).first()
+            if lib_branch_obj:
+                norm_avail_dict[branch]['branch_geo'] = lib_branch_obj.branch_geo
+            norm_avail_dict[branch]['branch_name'] = branch
+
+        norm_avail_list = norm_avail_dict.values()
+        for avail in norm_avail_list:
+            branch = avail.get('branch_name')
+            avail_copies = avail.get('avail_copies', 0)
+            unavail_copies = avail.get('unavail_copies', 0)
+            where_to_find = avail.get('sccl_where_to_find')
+            url = avail.get('sccl_search_url')
+            branch_geo = avail.get('branch_geo')
+            branch_geo_list = branch_geo.split(',')
+            branch_geo_long = float(branch_geo_list[0])
+            branch_geo_lat = float(branch_geo_list[1])
+            marker = {}
+            marker["type"] = "Feature"
+            marker["properties"] = {}
+            marker["geometry"] = {}
+            marker["geometry"]["type"] = "Point"
+            marker["geometry"]["coordinates"] = [branch_geo_long, branch_geo_lat]
+
+            if avail_copies:
+                marker_symbol = "library"
+                marker["properties"]["description"] = "<div class=%s><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
+                marker["properties"]["marker-symbol"] = marker_symbol
+                marker_list.append(marker)
+            elif avail_copies == 0:
+                marker_symbol = "roadblock"
+                marker["properties"]["description"] = "<div class=%s>%s</div><p>Copies Unavailable: %s</p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
+                marker["properties"]["marker-symbol"] = marker_symbol
+                marker_list.append(marker)
+            else:
+                continue
+
+        final_marker_list = {
+            "type": "FeatureCollection",
+            "features": marker_list
+        }
+
+        if norm_avail_list:
+            return render_template("bookdetails.html", dictionary=book_details, avail_list=norm_avail_list, marker_list=final_marker_list)
         else:
             continue
 
     return render_template("bookdetails.html", dictionary=book_details, avail_list=[])
+
+
+
+@app.route('/availability.geojson')
+def check_availability(bookid):
+    """Check library availability for an item."""
+
+    pass
 
 
 @app.route('/about')

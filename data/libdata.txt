@@ -13,10 +13,27 @@
 2|Foster City|94404|True|Visit any San Mateo County Library location to apply for a card.|True|1000 East Hillsdale Boulevard, Foster City, CA 94404|-122.2724567,37.5587842|(650)574-4842
 2|Half Moon Bay|94019|True|Visit any San Mateo County Library location to apply for a card.|True|620 Correas Street, Half Moon Bay, CA 94019|-122.4324522,37.4616848|(650)726-2316
 2|Millbrae|94030|True|Visit any San Mateo County Library location to apply for a card.|True|1 Library Avenue, Millbrae, CA 94030|-122.3991403,37.6023106|(650)697-7607
-2|Pacifica Sanchez|94044|True|Visit any San Mateo County Library location to apply for a card.|True|1111 Terra Nova Boulevard, Pacifica, CA 94044|-122.4790657,37.5861187|(650)359-3397
-2|Pacifica Sharp Park|94044|True|Visit any San Mateo County Library location to apply for a card.|True|104 Hilton Way, Pacifica, CA 94044|-122.4941176,37.6321728|(650)355-5196
+2|Pacifica-Sanchez|94044|True|Visit any San Mateo County Library location to apply for a card.|True|1111 Terra Nova Boulevard, Pacifica, CA 94044|-122.4790657,37.5861187|(650)359-3397
+2|Pacifica-Sharp Park|94044|True|Visit any San Mateo County Library location to apply for a card.|True|104 Hilton Way, Pacifica, CA 94044|-122.4941176,37.6321728|(650)355-5196
 2|Portola Valley|94028|True|Visit any San Mateo County Library location to apply for a card.|True|765 Portola Road, Portola Valley, CA 94028|-122.2311893,37.3819854|(650)851-0560
 2|San Carlos|94070|True|Visit any San Mateo County Library location to apply for a card.|True|610 Elm Street, San Carlos, CA 94070|-122.2646153,37.5036724|(650)591-0341
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Burlingame-Main|94010|True|Visit any San Mateo County Library location to apply for a card.|True|480 Primrose Road, Burlingame, CA 94010|-122.3513847,37.5792684|(650)558-7400
+2|Burlingame-Easton|94010|True|Visit any San Mateo County Library location to apply for a card.|True|1800 Easton Drive, Burlingame, CA 94010|-122.3737847,37.5839384|(650)340-6180
+2|Daly City-Bayshore|94014|True|Visit any San Mateo County Library location to apply for a card.|True|460 Martin Street, Daly City, CA 94014|,|(650)991-8074
+2|Daly City-John Daly|94014|True|Visit any San Mateo County Library location to apply for a card.|True|134 Hillside Boulevard, Daly City, CA 94014|,|(650)991-8073
+2|Daly City-Serramonte|94015|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Daly City-Westlake|94015|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
+2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
 2|Woodside|94062|True|Visit any San Mateo County Library location to apply for a card.|True|3140 Woodside Road, Woodside, CA 94062|-122.2602131,37.4292118|(650)851-0147
 3|Anza|94121|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|550 37th Avenue, San Francisco, CA 94121|-122.4994062,37.7785276|(415)355-5717
 3|Bayview|94124|True|Residents of California may obtain a library card for free. Visit any San Francisco Public Library location to apply for a card.|True|5075 3rd Street, San Francisco, CA 94124|-122.3933029,37.7325441|(415)355-5757

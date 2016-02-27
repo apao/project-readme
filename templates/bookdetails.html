@@ -59,23 +59,21 @@
               <tr>
                 <th>Library System</th>
                 <th>Branch</th>
-                <th>Status</th>
-                <th>Section</th>
-                <th>Call No.</th>
+                <th>Avail Copies</th>
+                <th>Where to Find</th>
               </tr>
               {% for avail_dict in avail_list %}
               <tr>
                 <td>SCCL</td>
                 <td>{{ avail_dict.branch_name }}</td>
-                <td>{{ avail_dict.status }}</td>
-                <td>{{ avail_dict.branch_section }}</td>
-                <td>{{ avail_dict.call_no }}</td>
+                <td>{{ avail_dict.avail_copies | default('No Available Copies') }}</td>
+                <td>{{ avail_dict.sccl_where_to_find }}</td>
               </tr>
               {% else %}
               <tr>
                 <td colspan="0">No Library Availability Found</td>
               </tr>
-              {% endfor %} 
+              {% endfor %}
             </table>
           </div>
         </div>
@@ -88,4 +86,77 @@
 </div>
 
 
+{% endblock %}
+
+{% block javascript %}
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhbyIsImEiOiJjaWwwaGhqMm4xdjB1dXltM2NhZGl5NHY2In0.PlgVAjJ-m_7BunI7VwjPGA';
+
+  var markers = {{ marker_list|safe }};
+
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v8',
+    center: [-122.2526642, 37.5187509],
+    zoom: 8
+  });
+
+  map.on('style.load', function () {
+    // Add marker data as a new GeoJSON source.
+    map.addSource("markers", {
+      "type": "geojson",
+      "data": markers
+    });
+
+    // Add a layer showing the markers.
+    map.addLayer({
+        "id": "markers",
+        "interactive": true,
+        "type": "symbol",
+        "source": "markers",
+        "layout": {
+            "icon-image": "{marker-symbol}-15",
+            "icon-allow-overlap": true
+        }
+    });
+  });
+
+  var popup = new mapboxgl.Popup();
+
+  // When a click event occurs near a marker icon, open a popup at the location of
+  // the feature, with description HTML from its properties.
+  map.on('click', function (e) {
+      map.featuresAt(e.point, {
+          radius: 7.5, // Half the marker size (15px).
+          includeGeometry: true,
+          layer: 'markers'
+      }, function (err, features) {
+
+          if (err || !features.length) {
+              popup.remove();
+              return;
+          }
+
+          var feature = features[0];
+
+          // Populate the popup and set its coordinates
+          // based on the feature found.
+          popup.setLngLat(feature.geometry.coordinates)
+              .setHTML(feature.properties.description)
+              .addTo(map);
+      });
+  });
+
+  // Use the same approach as above to indicate that the symbols are clickable
+  // by changing the cursor style to 'pointer'.
+  map.on('mousemove', function (e) {
+      map.featuresAt(e.point, {
+          radius: 7.5, // Half the marker size (15px).
+          layer: 'markers'
+      }, function (err, features) {
+          map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
+      });
+  });
+
+</script>
 {% endblock %}
