@@ -733,6 +733,7 @@ def get_sfpl_availability(isbn):
         dict_of_status_details['branch_section'] = list_of_status_details[1]
         dict_of_status_details['call_no'] = list_of_status_details[2]
         dict_of_status_details['status'] = list_of_status_details[3]
+        dict_of_status_details['sfpl_search_url'] = sfpl_search_url
         full_list_of_branch_avails.append(dict_of_status_details)
 
     return full_list_of_branch_avails
@@ -886,12 +887,12 @@ def normalize_sccl_availability(dictlist):
         current_num_of_copies = avail.get('num_of_copies')
         current_url = avail.get('sccl_search_url')
         branch_dict[current_branch] = branch_dict.get(current_branch, {})
-        branch_dict[current_branch]['sccl_where_to_find'] = branch_dict.get(current_branch).get('sccl_where_to_find', [])
-        branch_dict[current_branch]['sccl_search_url'] = current_url
+        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+        branch_dict[current_branch]['search_url'] = current_url
         if avail.get('status') == 'Available':
             branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
-            branch_dict.get(current_branch).get('sccl_where_to_find').append(tuple([current_branch_section, current_call_num]))
-        elif "Due" in avail.get('status'):
+            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+        elif "Due" in avail.get('status') or "Holdshelf" in avail.get('status'):
             branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
         else:
             continue
@@ -912,12 +913,12 @@ def normalize_smcl_availability(dictlist):
         current_num_of_copies = avail.get('num_of_copies')
         current_url = avail.get('smcl_search_url')
         branch_dict[current_branch] = branch_dict.get(current_branch, {})
-        branch_dict[current_branch]['smcl_where_to_find'] = branch_dict.get(current_branch).get('smcl_where_to_find', [])
-        branch_dict[current_branch]['smcl_search_url'] = current_url
+        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+        branch_dict[current_branch]['search_url'] = current_url
         if avail.get('status') == 'CHECK SHELF':
             branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
-            branch_dict.get(current_branch).get('smcl_where_to_find').append(tuple([current_branch_section, current_call_num]))
-        elif "Due" in avail.get('status'):
+            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+        elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
             branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
         else:
             continue
@@ -925,10 +926,67 @@ def normalize_smcl_availability(dictlist):
     return branch_dict
 
 
+def normalize_sfpl_availability(dictlist):
+    """Return normalized availability to pass to javascript for map rendering."""
+
+    branch_dict = {}
+
+    for avail in dictlist:
+        current_branch = avail.get('branch_name')
+        current_call_num = avail.get('call_no')
+        current_branch_section = avail.get('branch_section')
+        current_num_of_copies = avail.get('num_of_copies')
+        current_url = avail.get('sfpl_search_url')
+        branch_dict[current_branch] = branch_dict.get(current_branch, {})
+        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+        branch_dict[current_branch]['search_url'] = current_url
+        if avail.get('status') == 'CHECK SHELF':
+            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+        elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
+            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+        else:
+            continue
+
+    return branch_dict
 
 
+def avails_to_markers(list_of_avails):
+    """Return marker geojson based on list of availabilities."""
 
+    marker_list = []
 
+    for avail in list_of_avails:
+        branch = avail.get('branch_name')
+        avail_copies = avail.get('avail_copies', 0)
+        unavail_copies = avail.get('unavail_copies', 0)
+        where_to_find = avail.get('where_to_find')
+        url = avail.get('search_url')
+        branch_geo = avail.get('branch_geo')
+        branch_geo_list = branch_geo.split(',')
+        branch_geo_long = float(branch_geo_list[0])
+        branch_geo_lat = float(branch_geo_list[1])
+        marker = {}
+        marker["type"] = "Feature"
+        marker["properties"] = {}
+        marker["geometry"] = {}
+        marker["geometry"]["type"] = "Point"
+        marker["geometry"]["coordinates"] = [branch_geo_long, branch_geo_lat]
+
+        if avail_copies:
+            marker_symbol = "library"
+            marker["properties"]["description"] = "<div class=%s><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            marker_list.append(marker)
+        elif avail_copies == 0:
+            marker_symbol = "roadblock"
+            marker["properties"]["description"] = "<div class=%s>%s</div><p>Copies Unavailable: %s</p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            marker_list.append(marker)
+        else:
+            continue
+
+    return marker_list
 
 
 

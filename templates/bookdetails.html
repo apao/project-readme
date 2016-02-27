@@ -64,10 +64,10 @@
               </tr>
               {% for avail_dict in avail_list %}
               <tr>
-                <td>SCCL</td>
+                <td>{{ avail_dict.sys_name }}</td>
                 <td>{{ avail_dict.branch_name }}</td>
                 <td>{{ avail_dict.avail_copies | default('No Available Copies') }}</td>
-                <td>{{ avail_dict.sccl_where_to_find }}</td>
+                <td>{{ avail_dict.where_to_find[0] | default('N/A') }}</td>
               </tr>
               {% else %}
               <tr>
