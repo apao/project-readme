@@ -2,6 +2,9 @@
 {% block content %}
 
 <div class="col-xs-12 row col-sm-6 col-sm-offset-3">
+    <div id="loading">
+        <span></span>
+    </div>
     <div class="table-responsive">
       <table class="table table-hover">
       {% for dict_item in list %}
@@ -36,7 +39,18 @@
     </div>
 </div>
 
+{% endblock %}
 
+{% block javascript %}
+<script>
+  function addSpinner(evt) {
+      $('#loading').attr('width', '300')
+      $('#loading').attr('height', '300')
+      $('#loading').addClass('glyphicon glyphicon-refresh spinning');
+  }
+
+  $('.row.title').click(addSpinner);
+</script>
 {% endblock %}
 
 

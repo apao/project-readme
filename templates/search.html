@@ -10,9 +10,21 @@
       </div>
     </div>
     <div class="row col-sm-offset-5 col-sm-2">
-      <button type="submit" class="btn btn-primary">Submit</button>
+      <button type="submit" id="submitsearch" class="btn btn-primary btn-lg">
+        <span></span> Submit
+      </button>
     </div>
   </form>
 </div>
 
+{% endblock %}
+
+{% block javascript %}
+<script>
+  function addSpinner(evt) {
+    $('#submitsearch span').addClass('glyphicon glyphicon-refresh spinning')
+  }
+
+  $('#submitsearch').click(addSpinner);
+</script>
 {% endblock %}
