@@ -989,7 +989,244 @@ def avails_to_markers(list_of_avails):
     return marker_list
 
 
+# =======================================================
+# FUNCTIONS TO GET EACH LIBRARY'S EBOOK ITEM AVAILABILITY
+# =======================================================
 
+def get_sccl_eresources_by_keyword(keyword):
+    """Given search keywords, provides availability for eresources in the Santa Clara County Library System."""
+
+    # for each isbn, return list of dictionaries:
+    # [ { 'isbn': { 'branch_name': ____,
+    #               'status': ____,
+    #               'number_of_copies': ____,
+    #               'collection_name': ____,
+    #               'call_no': ____}
+    #   }
+    # ]
+    # for items not found in sccl, page html will have <div class="mainContent">
+    # for items found in sccl, search for sccl id number:
+    # https://sccl.bibliocommons.com/item/show_circulation/1402794103.json
+    # >>> sccl_results = pq(requests.get("https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=9780312349493&commit=Search&searchOpt=catalogue").content)
+    # >>> sccl_results('a.circInfo.value.underlined').attr('href')
+    # >>> re.search('/(\w*)\?', '/item/show_circulation/1214096103?search_scope=CAL-SCCL').group(0)
+    # '/1214096103?'
+    # >>> '/1214096103?'[1:-1]
+    # '1214096103'
+    # >>> page = requests.get("https://sccl.bibliocommons.com/item/show_circulation/1402794103.json")
+    # >>> import json
+    # >>> data = json.loads(page.text)
+    # >>> html = data['html']
+    # >>> pq_avail = pq(html)
+    # >>> pq_avail('tr')
+    # >>> for tr in pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items():
+    # ...     for td in tr.find('td').items():
+    # ...         print td.text()
+    # ...     print "=================="
+
+    # https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=lean%20in&commit=Search&searchOpt=catalogue&formats=EBOOK
+
+    sccl_eresource_search_url = SCCL_SEARCH_URL_BEG + urllib.quote_plus(keyword) + SCCL_SEARCH_URL_END
+
+    return sccl_eresource_search_url
+
+
+    # availabilities_for_isbn = {}  # key: isbn, value: dict of dicts
+    # full_list_of_branch_avails = []
+    #
+    # # requests.get the sccl search page using isbn
+    # # turn SCCl into a templated string, {}
+    # sccl_search_url = SCCL_SEARCH_URL_BEG + str(isbn) + SCCL_SEARCH_URL_END
+    #
+    # # requests.get the contents of the page and convert to pq object
+    # page = requests.get(sccl_search_url)
+    # pq_page = pq(page.content)
+    #
+    # # find the sccl id no for the isbn on the page by css selector
+    # availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+    #
+    # if not availability_string:
+    #     return full_list_of_branch_avails
+    #
+    # availability_string = availability_string.replace('?', '.json?')
+    #
+    # # with the sccl_id_num, get the sccl availability json
+    # sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + availability_string
+    #
+    # avail_page = requests.get(sccl_avail_url)
+    # json_avail_page = json.loads(avail_page.text)
+    # html_section_only = json_avail_page["html"]
+    #
+    # pq_html_section = pq(html_section_only)
+    #
+    # # find table rows that are not under <thead> tags
+    # non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+    #
+    # for tr in non_thead_tr_list:
+    #     list_of_status_details = []
+    #     dict_of_status_details = {}
+    #     for td in tr.find('td').items():
+    #         list_of_status_details.append(td.text())
+    #     branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
+    #     if len(branch_name_and_copies) == 1:
+    #         branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+    #     else:
+    #         branch_name_and_copies[1] = branch_name_and_copies[1][:-1] # Num of copies without parens
+    #
+    #     dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+    #     dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+    #     dict_of_status_details['branch_section'] = list_of_status_details[1]
+    #     dict_of_status_details['call_no'] = list_of_status_details[2]
+    #     dict_of_status_details['status'] = list_of_status_details[3]
+    #     dict_of_status_details['sccl_search_url'] = sccl_search_url
+    #     full_list_of_branch_avails.append(dict_of_status_details)
+    #
+    # return full_list_of_branch_avails
+
+
+def get_sfpl_ebooks_by_keyword(keyword):
+    """Given search keywords, provides availability for ebooks in the San Francisco Public Library System."""
+
+    sfpl_ebook_id_list = []
+    # https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q=lean%20in&formats=EBOOK
+    SFPL_SEARCH_EBOOKS_URL_BEG = "https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q="
+    SFPL_SEARCH_EBOOKS_URL_END = "&formats=EBOOK"
+    search_keywords = urllib.quote(keyword)
+
+    sfpl_search_ebooks_url = SFPL_SEARCH_EBOOKS_URL_BEG + search_keywords + SFPL_SEARCH_EBOOKS_URL_END
+
+    # requests.get the contents of the search page and convert to pq object
+    page = requests.get(sfpl_search_ebooks_url)
+    pq_page = pq(page.content)
+
+    # find the href with sfpl id no. on the page by css selector
+    # ebook_id_objects = pq_page('img.jacketCover.bib_detail').attr('id')
+    # ebook_id_pq_objects = pq_page.find('img.jacketCover.bib_detail')
+    # for i in range(len(ebook_id_pq_objects)):
+    #     sfpl_ebook_id_list.append(ebook_id_pq_objects.eq(i).attr('id'))
+    #
+    # title_lst = [i.text() for i in pq_page.items('span.title')]
+    # author_lst = [i.text() for i in pq_page.items('span.author')]
+
+    title_results_lst = [i.find('span.title').text() for i in pq_page.items('div.list_item_outer')]
+    author_results_lst = [i.find('span.author').text() for i in pq_page.items('div.list_item_outer')]
+
+    print "=======TITLES=========="
+    print title_results_lst
+    print "======================="
+    print "=======AUTHORS=========="
+    print author_results_lst
+
+    # # https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=9780062349026&commit=Search
+    # # https://sfpl.bibliocommons.com/item/show_circulation/3011348093.json?search_scope=CAL-SFPL
+    #
+    # full_list_of_branch_avails = []
+    #
+    # # requests.get the sccl search page using isbn
+    # # turn SFPL into a templated string, {}
+    # sfpl_search_url = SFPL_SEARCH_URL_BEG + str(isbn) + SFPL_SEARCH_URL_END
+    #
+    # # requests.get the contents of the page and convert to pq object
+    # page = requests.get(sfpl_search_url)
+    # pq_page = pq(page.content)
+    #
+    # # find the href with sfpl id no. on the page by css selector
+    # availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+    #
+    # if not availability_string:
+    #     return full_list_of_branch_avails
+    #
+    # availability_string = availability_string.replace('?', '.json?')
+    #
+    # # with the sccl_id_num, get the sccl availability json
+    # sfpl_avail_url = SFPL_AVAILABILITY_URL_BEG + availability_string
+    #
+    # avail_page = requests.get(sfpl_avail_url)
+    # json_avail_page = json.loads(avail_page.text)
+    # html_section_only = json_avail_page["html"]
+    #
+    # pq_html_section = pq(html_section_only)
+    #
+    # # find table rows that are not under <thead> tags
+    # non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+    #
+    # for tr in non_thead_tr_list:
+    #     list_of_status_details = []
+    #     dict_of_status_details = {}
+    #     for td in tr.find('td').items():
+    #         list_of_status_details.append(td.text())
+    #     branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
+    #     if len(branch_name_and_copies) == 1:
+    #         branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+    #     else:
+    #         branch_name_and_copies[1] = branch_name_and_copies[1][:-1]  # Num of copies without parens
+    #
+    #     dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+    #     dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+    #     dict_of_status_details['branch_section'] = list_of_status_details[1]
+    #     dict_of_status_details['call_no'] = list_of_status_details[2]
+    #     dict_of_status_details['status'] = list_of_status_details[3]
+    #     dict_of_status_details['sfpl_search_url'] = sfpl_search_url
+    #     full_list_of_branch_avails.append(dict_of_status_details)
+    #
+    # return full_list_of_branch_avails
+
+
+def get_smcl_eresources_by_keyword(keyword):
+    """Given search keywords, provides availability for eresources in the San Mateo County Library System."""
+
+    # https://smcl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=lean%20in&commit=Search&formats=EBOOK
+    pass
+
+    # full_list_of_branch_avails = []
+    #
+    # # requests.get the smcl search page using isbn
+    # smcl_search_url = SMCL_SEARCH_URL_BEG + str(isbn)
+    #
+    # # requests.get the contents of the page and convert to pq object
+    # page = requests.get(smcl_search_url)
+    # pq_page = pq(page.content)
+    #
+    # # find the availability href by css selector
+    # availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+    #
+    # if not availability_string:
+    #     return full_list_of_branch_avails
+    #
+    # availability_string = availability_string.replace('?', '.json?')
+    #
+    # # with the href, get the sccl availability json
+    # smcl_avail_url = SMCL_AVAILABILITY_URL_BEG + availability_string
+    #
+    # avail_page = requests.get(smcl_avail_url)
+    # json_avail_page = json.loads(avail_page.text)
+    # html_section_only = json_avail_page["html"]
+    #
+    # pq_html_section = pq(html_section_only)
+    #
+    # # find table rows that are not under <thead> tags
+    # non_thead_tr_list = pq_html_section.find('tr').filter(lambda i: not pq(this).parents('thead')).items()
+    #
+    # for tr in non_thead_tr_list:
+    #     list_of_status_details = []
+    #     dict_of_status_details = {}
+    #     for td in tr.find('td').items():
+    #         list_of_status_details.append(td.text())
+    #     branch_name_and_copies = list_of_status_details[0].split('(')  # 0-index item is branch name and num of copies
+    #     if len(branch_name_and_copies) == 1:
+    #         branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+    #     else:
+    #         branch_name_and_copies[1] = branch_name_and_copies[1][:-1]  # Num of copies without parens
+    #
+    #     dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+    #     dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+    #     dict_of_status_details['branch_section'] = list_of_status_details[1]
+    #     dict_of_status_details['call_no'] = list_of_status_details[2]
+    #     dict_of_status_details['status'] = list_of_status_details[3]  # 'CHECK SHELF' MEANS AVAILABLE
+    #     dict_of_status_details['smcl_search_url'] = smcl_search_url
+    #     full_list_of_branch_avails.append(dict_of_status_details)
+    #
+    # return full_list_of_branch_avails
 
 
 

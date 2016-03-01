@@ -117,6 +117,7 @@ def item_details(bookid):
         #     norm_avail_dict[branch]['branch_name'] = branch
 
         agg_norm_avail_list = dict_to_evaluate.values()
+        newlist = sorted(agg_norm_avail_list, key=lambda k: (k['sys_name'], k['branch_name']))
         returned_marker_list = avails_to_markers(agg_norm_avail_list)
 
         # for avail in norm_avail_list:
@@ -155,11 +156,11 @@ def item_details(bookid):
         }
 
         if agg_norm_avail_list:
-            return render_template("bookdetails.html", dictionary=book_details, avail_list=agg_norm_avail_list, marker_list=final_marker_list)
+            return render_template("bookdetails.html", dictionary=book_details, avail_list=newlist, marker_list=final_marker_list)
         else:
             continue
 
-    return render_template("bookdetails.html", dictionary=book_details, avail_list=[])
+    return render_template("bookdetails.html", dictionary=book_details, avail_list=[], marker_list=0)
 
 
 

@@ -52,7 +52,10 @@
         <div class="row availability">
           <h3>Library Availability</h3>
           <div class="row map">
-            <div id='map'></div>
+            <div id="map"></div>
+          </div>
+          <div class"row">
+            <button type="button" id="geolocate" class="btn btn-primary btn-lg">Find Me!</button>
           </div>
           <div class="table-responsive">
             <table class="table table-hover">
@@ -60,14 +63,18 @@
                 <th>Library System</th>
                 <th>Branch</th>
                 <th>Avail Copies</th>
-                <th>Where to Find</th>
+                <th>Where to Find<br>Section | Call Number</th>
               </tr>
               {% for avail_dict in avail_list %}
               <tr>
                 <td>{{ avail_dict.sys_name }}</td>
                 <td>{{ avail_dict.branch_name }}</td>
-                <td>{{ avail_dict.avail_copies | default('No Available Copies') }}</td>
-                <td>{{ avail_dict.where_to_find[0] | default('N/A') }}</td>
+                <td>{{ avail_dict.avail_copies | default('No Available Copies Currently') }}</td>
+                {% if avail_dict.where_to_find %}
+                <td>{{ avail_dict.where_to_find[0][0] }} | {{ avail_dict.where_to_find[0][1] }}</td>
+                {% else %}
+                <td>N/A</td>
+                {% endif %}
               </tr>
               {% else %}
               <tr>
@@ -97,7 +104,7 @@
   var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v8',
-    center: [-122.2526642, 37.5187509],
+    center: [-74.2588894, 40.70583],
     zoom: 8
   });
 
@@ -157,6 +164,17 @@
           map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
       });
   });
+
+
+  // Fly to user location
+  $("#geolocate").click(function() {
+      console.log("We are inside FLY!");
+      map.flyTo({
+         center: [-122.4396918, 37.7841138]
+      });
+      $('#geolocate').prop('disabled', true);
+  });
+
 
 </script>
 {% endblock %}

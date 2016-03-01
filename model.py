@@ -46,12 +46,12 @@ class Book(db.Model):
     __tablename__ = "books"
 
     book_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    worldcaturl = db.Column(db.String(256), nullable=False)
+    worldcaturl = db.Column(db.String(500), nullable=False)
     title = db.Column(db.String(500), nullable=False)
-    publisher = db.Column(db.String(128), nullable=False)
+    publisher = db.Column(db.String(500), nullable=False)
     page_count = db.Column(db.String(10), nullable=True)
-    summary = db.Column(db.String(5000), nullable=True)
-    coverurl = db.Column(db.String(256), nullable=False)
+    summary = db.Column(db.String(10000), nullable=True)
+    coverurl = db.Column(db.String(500), nullable=False)
    
     def __repr__(self):
         """Represents book object"""
