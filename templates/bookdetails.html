@@ -166,13 +166,25 @@
   });
 
 
-  // Fly to user location
+  // Fly to user location based on browser geolocation
   $("#geolocate").click(function() {
       console.log("We are inside FLY!");
-      map.flyTo({
-         center: [-122.4396918, 37.7841138]
-      });
-      $('#geolocate').prop('disabled', true);
+      if (!navigator.geolocation) {
+          geolocate.innerHTML = "Geolocation is not available.";
+      } else {
+          function success(position) {
+              var longitude = position.coords.longitude;
+              var latitude = position.coords.latitude;
+              map.flyTo({
+                  center: [longitude, latitude]
+              });
+              $('#geolocate').prop('disabled', true);
+          };
+          function error() {
+              geolocate.innerHTML = "Unable to retrieve your location.";
+          };
+          navigator.geolocation.getCurrentPosition(success, error);
+      }
   });
 
 
