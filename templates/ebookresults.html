@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="col-xs-12 row col-sm-6 col-sm-offset-3">
+    <div class="row" id="loading">
+        <span></span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover">
+      {% for dict_item in list %}
+
+        <tr id="{{ dict_item.get('rank') }}">
+          <td class="col-xs-12 col-sm-2">
+            <img src="{{ dict_item.get('coverurl') }}" class="img-responsive" alt="cover for {{ dict_item.get('title') }}">
+          </td>
+          <td class="col-xs-12 col-sm-4">
+            <a href="/details/{{ dict_item.get('bookid') }}"><div class="row title">
+                {{ dict_item.get('title') }}
+            </div></a>
+            <div class="row author">
+                {{ dict_item.get('author')|join(', ') }}
+            </div>
+            <div class="row publisher">
+                {{ dict_item.get('publisher') }}
+            </div>
+            <div class="row format">
+                {{ dict_item.get('format') }}
+            </div>
+            {% if dict_item.get('page_count') %}
+            <div class="row pagecount">
+                {{ dict_item.get('page_count') }} pages
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+
+      {% endfor %}
+      </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+  function addSpinner(evt) {
+      $('#loading').attr('width', '300')
+      $('#loading').attr('height', '300')
+      $('#loading').addClass('glyphicon glyphicon-refresh spinning');
+  }
+
+  $('.row.title').click(addSpinner);
+</script>
+{% endblock %}
+
