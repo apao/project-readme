@@ -1088,7 +1088,9 @@ def get_sfpl_ebooks_by_keyword(keyword):
     """Given search keywords, provides availability for ebooks in the San Francisco Public Library System."""
 
     sfpl_ebook_id_list = []
+    list_of_final_items = []
     # https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q=lean%20in&formats=EBOOK
+    SFPL_BASE_URL = "https://sfpl.bibliocommons.com"
     SFPL_SEARCH_EBOOKS_URL_BEG = "https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q="
     SFPL_SEARCH_EBOOKS_URL_END = "&formats=EBOOK"
     search_keywords = urllib.quote(keyword)
@@ -1110,12 +1112,107 @@ def get_sfpl_ebooks_by_keyword(keyword):
 
     title_results_lst = [i.find('span.title').text() for i in pq_page.items('div.list_item_outer')]
     author_results_lst = [i.find('span.author').text() for i in pq_page.items('div.list_item_outer')]
+    item_href_lst = [i.find('a.jacketCoverLink').attr('href') for i in pq_page.items('div.pull-left.visible-xs.visible-sm')]
+    ebook_format_provider_lst = [i.find('span.value.callNumber').text() for i in pq_page.items('div.row.circ_info.list_item_section')]
+    coverurl_lst = [i.find('img.jacketCover').attr('src') for i in pq_page.items('div.pull-left.visible-xs.visible-sm')]
+    item_avail_href_lst = [i.find('a.click_n_sub').attr('href') for i in pq_page.items('div.availability_block')]
+    item_request_href_lst = [i.find('a.digital_request').attr('href') for i in pq_page.items('span.hold_button')]
 
-    print "=======TITLES=========="
-    print title_results_lst
-    print "======================="
-    print "=======AUTHORS=========="
-    print author_results_lst
+    item_details_full_url_lst = []
+    for href in item_href_lst:
+        item_full_details_url = SFPL_BASE_URL + href
+        item_details_full_url_lst.append(item_full_details_url)
+
+    for i in range(len(title_results_lst)):
+        if item_avail_href_lst[i] and item_request_href_lst[i]:
+            item_dict = dict(title=title_results_lst[i],
+                             author=author_results_lst[i],
+                             item_details_url=item_details_full_url_lst[i],
+                             ebook_format_provider=ebook_format_provider_lst[i],
+                             coverurl=coverurl_lst[i],
+                             item_avail_url=SFPL_BASE_URL + item_avail_href_lst[i],
+                             item_request_url=SFPL_BASE_URL + item_request_href_lst[i])
+            final_item_dict = get_sfpl_ebook_details(item_dict, item_dict.get('item_details_url'))
+        else:
+            item_dict = dict(title=title_results_lst[i],
+                             author=author_results_lst[i],
+                             item_details_url=item_details_full_url_lst[i],
+                             ebook_format_provider=ebook_format_provider_lst[i],
+                             coverurl=coverurl_lst[i],
+                             item_avail_url="",
+                             item_request_url="")
+            final_item_dict = get_sfpl_ebook_details(item_dict, item_dict.get('item_details_url'))
+        list_of_final_items.append(final_item_dict)
+
+    return list_of_final_items
+
+
+
+
+
+
+
+    # item_libid_lst = []
+    # isbns_full_lst = []
+    # other_details_lst = []
+    # summary_lst = []
+    # publisher_lst = []
+    # item_characteristics_lst = []
+    # goodreads_info_lst = []
+    # for url in item_details_full_url_lst:
+    #     item_page = requests.get(url)
+    #     pq_item_page = pq(item_page.content)
+    #     item_libid_str = pq_item_page('div.content.itemDetail').attr('id')
+    #     item_libid_lst.append(item_libid_str)
+    #     item_isbns_str = pq_item_page('div.content.itemDetail').attr('data-isbns')
+    #     item_isbns_lst = item_isbns_str.split(',')
+    #     isbns_full_lst.append(item_isbns_lst)
+    #     for isbn in item_isbns_lst:
+    #         if len(isbn) == 13:
+    #             goodreads_info = get_goodreads_info_by_isbn13(isbn)
+    #             goodreads_info_lst.append(goodreads_info)
+    #     item_pub_and_other_lst = [i.find('span.value').text() for i in pq_item_page.items('div.dataPair.clearfix')]
+    #     # if len(item_pub_and_other_lst) == 5:
+    #     #     item_pub, item_edition, item_isbns, item_characteristics, item_other_contributors = item_pub_and_other_lst
+    #     # else:
+    #     #     item_pub, item_edition, item_isbns, item_characteristics = item_pub_and_other_lst
+    #     # publisher_lst.append(item_pub)
+    #     # item_characteristics_lst.append(item_characteristics)
+    #     other_details_lst.append(item_pub_and_other_lst)
+    #     summary = pq_item_page('div.bib_description').text()
+    #     summary_lst.append(summary)
+    #
+    #
+    # print "=======TITLES=========="
+    # print title_results_lst, len(title_results_lst)
+    # print "======================="
+    # print "=======AUTHORS=========="
+    # print author_results_lst, len(author_results_lst)
+    # print "======================="
+    # print "=======ITEM HREFS=========="
+    # print item_href_lst, len(item_href_lst)
+    # print "======================="
+    # print "=======FORMAT & PROVIDERS=========="
+    # print ebook_format_provider_lst, len(ebook_format_provider_lst)
+    # print "=======ITEM AVAIL HREFS=========="
+    # print item_avail_href_lst, len(item_avail_href_lst)
+    # print "=======ITEM REQUEST HREFS=========="
+    # print item_request_href_lst, len(item_request_href_lst)
+    # print "=======COVER URLS=========="
+    # print coverurl_lst, len(coverurl_lst)
+    # print "=======ITEM DETAILS FULL URLS=========="
+    # print item_details_full_url_lst, len(item_details_full_url_lst)
+    # print "=======ITEM DETAILS - LIB ID=========="
+    # print item_libid_lst, len(item_libid_lst)
+    # print "=======ITEM DETAILS - ISBN STRING=========="
+    # print isbns_full_lst, len(isbns_full_lst)
+    # print "=======ITEM DETAILS - PUB & OTHER=========="
+    # print item_pub_and_other_lst, len(item_pub_and_other_lst)
+    # print "=======ITEM DETAILS - GOODREADS INFO=========="
+    # print goodreads_info_lst, len(goodreads_info_lst)
+    # # print "=======ITEM DETAILS - SUMMARY=========="
+    # # print summary_lst, len(summary_lst)
+
 
     # # https://sfpl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q=9780062349026&commit=Search
     # # https://sfpl.bibliocommons.com/item/show_circulation/3011348093.json?search_scope=CAL-SFPL
@@ -1171,6 +1268,88 @@ def get_sfpl_ebooks_by_keyword(keyword):
     #
     # return full_list_of_branch_avails
 
+
+def get_sfpl_ebook_details(itemdict, sfplurl):
+    """Given an SFPL item url, provide details about the ebook."""
+
+    # item_libid_lst = []
+    # isbns_full_lst = []
+    # other_details_lst = []
+    # summary_lst = []
+    # publisher_lst = []
+    # item_characteristics_lst = []
+    # goodreads_info_lst = []
+
+    item_page = requests.get(sfplurl)
+    pq_item_page = pq(item_page.content)
+    item_libid_str = pq_item_page('div.content.itemDetail').attr('id')
+    itemdict['sfpl_libid'] = item_libid_str
+    # item_libid_lst.append(item_libid_str)
+    item_isbns_str = pq_item_page('div.content.itemDetail').attr('data-isbns')
+    item_isbns_lst = item_isbns_str.split(',')
+    # isbns_full_lst.append(item_isbns_lst)
+    for isbn in item_isbns_lst:
+        if len(isbn) == 13:
+            itemdict['isbn13'] = isbn
+            goodreads_info = get_goodreads_info_by_isbn13(isbn)
+            itemdict['isbn_to_goodreads_list'] = goodreads_info
+            break
+            # goodreads_info_lst.append(goodreads_info)
+    item_pub_and_other_lst = [i.find('span.value').text() for i in pq_item_page.items('div.dataPair.clearfix')]
+    itemdict['publisher_and_page_count'] = item_pub_and_other_lst
+    # if len(item_pub_and_other_lst) == 5:
+    #     item_pub, item_edition, item_isbns, item_characteristics, item_other_contributors = item_pub_and_other_lst
+    # else:
+    #     item_pub, item_edition, item_isbns, item_characteristics = item_pub_and_other_lst
+    # publisher_lst.append(item_pub)
+    # item_characteristics_lst.append(item_characteristics)
+    # other_details_lst.append(item_pub_and_other_lst)
+    summary = pq_item_page('div.bib_description').text()
+    itemdict['summary'] = summary
+    # summary_lst.append(summary)
+
+    return itemdict
+
+    #     book_details_dict['worldcaturl'] = url
+#     book_details_dict['title'] = title
+#     book_details_dict['author'] = author_list
+#     book_details_dict['publisher'] = publisher
+#     book_details_dict['page_count'] = num_of_pages
+#     book_details_dict['coverurl'] = coverurl
+#     book_details_dict['format'] = format
+#     book_details_dict['summary'] = summary
+#     book_details_dict['isbn_to_goodreads_list'] = isbn_to_goodreads_list
+
+
+    # print "=======TITLES=========="
+    # print title_results_lst, len(title_results_lst)
+    # print "======================="
+    # print "=======AUTHORS=========="
+    # print author_results_lst, len(author_results_lst)
+    # print "======================="
+    # print "=======ITEM HREFS=========="
+    # print item_href_lst, len(item_href_lst)
+    # print "======================="
+    # print "=======FORMAT & PROVIDERS=========="
+    # print ebook_format_provider_lst, len(ebook_format_provider_lst)
+    # print "=======ITEM AVAIL HREFS=========="
+    # print item_avail_href_lst, len(item_avail_href_lst)
+    # print "=======ITEM REQUEST HREFS=========="
+    # print item_request_href_lst, len(item_request_href_lst)
+    # print "=======COVER URLS=========="
+    # print coverurl_lst, len(coverurl_lst)
+    # print "=======ITEM DETAILS FULL URLS=========="
+    # print item_details_full_url_lst, len(item_details_full_url_lst)
+    # print "=======ITEM DETAILS - LIB ID=========="
+    # print item_libid_lst, len(item_libid_lst)
+    # print "=======ITEM DETAILS - ISBN STRING=========="
+    # print isbns_full_lst, len(isbns_full_lst)
+    # print "=======ITEM DETAILS - PUB & OTHER=========="
+    # print item_pub_and_other_lst, len(item_pub_and_other_lst)
+    # print "=======ITEM DETAILS - GOODREADS INFO=========="
+    # print goodreads_info_lst, len(goodreads_info_lst)
+    # print "=======ITEM DETAILS - SUMMARY=========="
+    # print summary_lst, len(summary_lst)
 
 def get_smcl_eresources_by_keyword(keyword):
     """Given search keywords, provides availability for eresources in the San Mateo County Library System."""
@@ -1229,6 +1408,136 @@ def get_smcl_eresources_by_keyword(keyword):
     # return full_list_of_branch_avails
 
 
+# def get_ebook_details_by_url(dict_of_item):
+#     """Provided one item's dictionary results from search_for_books(keywords),
+#     returns full book details for database for that item by the library URL of its items details page."""
+#
+#     # return list of only ISBN-13's for each url:
+#     # [ { '[url]': [#, #, #, ...] },
+#     #   ...
+#     # ]
+#     # >>> page = requests.get("http://www.worldcat.org/title/lean-in-women-work-and-the-will-to-lead/oclc/813526963&referer=brief_results")
+#     # >>> pq_details_page = pq(page.content)
+#     # ISBN
+#     # >>> isbn = pq_details_page('#details-standardno').eq(0).text()
+#     # >>> isbn
+#     # 'ISBN: 9780385349949 0385349947'
+#     # TITLE
+#     # >>> pq_details_page('h1.title').text()
+#     # 'Lean in : women, work, and the will to lead'
+#     # AUTHOR
+#     # >>> authors_string = pq_details_page('#bib-author-cell').text()
+#     # >>> [x.strip() for x in authors_string.split(';')]
+#     # ['Sheryl Sandberg', 'Nell Scovell']
+#     # COVER URL
+#     # http://covers.openlibrary.org/b/isbn/9780385533225-S.jpg
+#     # PUBLISHER
+#     # NUMBER OF PAGES
+#     # SUMMARY
+#
+#     isbn_10_key = 'ISBN-10'
+#     isbn10_list = []
+#     isbn_13_key = 'ISBN-13'
+#     isbn13_list = []
+#
+#     # initialize the empty dicts for this specific result
+#     book_details_dict = {}
+#
+#     # get the url string from the dictionary passed into this function
+#     url = dict_of_item['worldcaturl']
+#
+#     # requests.get the contents of the page and convert to pq object
+#     page = requests.get(url)
+#     pq_page = pq(page.content)
+#
+#     # find the isbns on the page by their css selector and format them as a list
+#     isbn_string = pq_page('#details-standardno').eq(0).text()
+#     isbn_list = isbn_string.split(" ")
+#
+#     # TITLE
+#     # >>> pq_details_page('h1.title').text()
+#     # 'Lean in : women, work, and the will to lead'
+#     title = pq_page('h1.title').text()
+#
+#     # AUTHOR
+#     # >>> authors_string = pq_details_page('#bib-author-cell').text()
+#     # >>> [x.strip() for x in authors_string.split(';')]
+#     # ['Sheryl Sandberg', 'Nell Scovell']
+#     authors_string = pq_page('#bib-author-cell').text()
+#     author_list = [author.strip() for author in authors_string.split(';')]
+#
+#     # PUBLISHER
+#     # >>> publisher = pq_details_page('#bib-publisher-cell').text()
+#     # 'New York : Alfred A. Knopf, 2013.' (pub_loc : pub, pub_year)
+#     publisher = pq_page('#bib-publisher-cell').text()
+#
+#     # FORMAT
+#     format = pq_page('span.itemType').text()
+#
+#     # NUMBER OF PAGES
+#     # >>> desc = pq_details_page('#details-description td').text()
+#     # "228 pages; 1 edition"
+#     # >>> page_num = []
+#     # >>> for char in desc[desc.find('pages')-1::-1]:
+#     # ...     if char != " " and not char.isdigit():
+#     # ...         break
+#     # ...     elif char == " " or char.isdigit():
+#     # ...         page_num.insert(0, char)
+#     # ...
+#     # ...
+#     # ...
+#     # >>> page_num
+#     # ['2', '2', '8', ' ']
+#     desc = pq_page('#details-description td').text()
+#     page_num = []
+#
+#     for char in desc[desc.find('pages')-2::-1]:
+#         if not char.isdigit():
+#             break
+#         else:
+#             page_num.insert(0, char)
+#
+#     num_of_pages = "".join(page_num)
+#
+#     # SUMMARY
+#     # >>> summary = pq_details_page('div.abstracttxt').text()
+#     summary = pq_page('div.abstracttxt').text()
+#
+#     # for any list item that is an ISBN of a particular length, assign the appropriate key and value
+#     for item in isbn_list:
+#         if item != "ISBN:" and len(item) == 10:
+#             isbn10_list.append(str(item))
+#         elif item != "ISBN:" and len(item) == 13:
+#             isbn13_list.append(str(item))
+#
+#     book_details_dict[isbn_10_key] = isbn10_list
+#     book_details_dict[isbn_13_key] = isbn13_list
+#
+#     # >>> OPEN_LIBRARY_COVER_URL + ISBN + OPEN_LIBRARY_MED_IMG_END
+#     # 'http://covers.openlibrary.org/b/isbn/9780385349956-M.jpg'
+#     # cover_url_list = [OPEN_LIBRARY_COVER_URL+isbn13+OPEN_LIBRARY_MED_IMG_END for isbn13 in isbn13_list]
+#     coverurl = dict_of_item['coverurl']
+#
+#     # GOODREADS INFO
+#     isbn_to_goodreads_list = [get_goodreads_info_by_isbn13(isbn13) for isbn13 in isbn13_list]
+#
+#     # TODO - Simplify k.values()[0] issue and sorted[0].keys()[0]
+#     # sortedlist = list(sorted(isbn_to_goodreads_list, key=lambda k: int(k.values()[0]['goodreads_ratings_count'])))
+#     # lead_isbn13_by_ratings_count = sortedlist[0].keys()[0]
+#
+#     # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
+#     book_details_dict['worldcaturl'] = url
+#     book_details_dict['title'] = title
+#     book_details_dict['author'] = author_list
+#     book_details_dict['publisher'] = publisher
+#     book_details_dict['page_count'] = num_of_pages
+#     book_details_dict['coverurl'] = coverurl
+#     book_details_dict['format'] = format
+#     book_details_dict['summary'] = summary
+#     book_details_dict['isbn_to_goodreads_list'] = isbn_to_goodreads_list
+#     # book_details_dict['isbn13_lead_by_goodreads_ratings_count'] = lead_isbn13_by_ratings_count
+#
+#     return book_details_dict
 
 
 

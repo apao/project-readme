@@ -55,32 +55,46 @@ def get_search_results():
 
     # IF queried, do NOT crawl, and return results
 
+    search_type = request.form["searchtype"]
     search_keywords = request.form.get("keywords")
-
     search_keywords = search_keywords.strip().lower()
 
-    matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
+    if search_type == "print":
 
-    if matching_query:
-        print "Matching query found!"
-        final_results = get_db_results(matching_query.query_id)
-    else: 
-        initial_results = get_crawl_results(search_keywords)
-        new_query_id = add_new_query(search_keywords)
-        print "New query added!"
-        
-        final_results = []
+        matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
-        for item in initial_results:
+        if matching_query:
+            print "Matching query found!"
+            final_results = get_db_results(matching_query.query_id)
+        else:
+            initial_results = get_crawl_results(search_keywords)
+            new_query_id = add_new_query(search_keywords)
+            print "New query added!"
 
-            new_dict = get_item_details(item)
-            rank = item['rank']
-            new_dict['rank'] = rank
-            new_book_id = add_new_book(new_query_id, new_dict, rank)
-            new_dict['bookid'] = new_book_id
-            final_results.append(new_dict)
+            final_results = []
 
-    return render_template("searchresults.html", list=final_results)
+            for item in initial_results:
+
+                new_dict = get_item_details(item)
+                rank = item['rank']
+                new_dict['rank'] = rank
+                new_book_id = add_new_book(new_query_id, new_dict, rank)
+                new_dict['bookid'] = new_book_id
+                final_results.append(new_dict)
+
+        return render_template("searchresults.html", list=final_results)
+
+    elif search_type == "ebooks":
+
+        return render_template("base.html")
+
+    else:
+
+        return "Something is not working!"
+
+
+
+
 
 
 @app.route('/details/<int:bookid>')
