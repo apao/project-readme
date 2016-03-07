@@ -2,18 +2,35 @@
 {% block content %}
 
 
-<div class="row">
-  <form>
-    <div class="form-group row">
-      <label for="keywords" class="form-control-label sr-only">Your Zipcode</label>
-      <div class="col-sm-offset-2 col-sm-8">
-        <input type="text" class="form-control" id="user-zipcode" placeholder="Enter Your Zipcode">
-      </div>
-    </div>
-    <div class="row col-sm-offset-5 col-sm-2">
-      <button type="submit" class="btn btn-primary">Submit</button>
-    </div>
+<div class="row col-md-7" id="welcomemsg">
+  <h1>Find books you want to read for free in the libraries closest to you.</h1>
+  <h3>Tell us what book you want to read and we show you where it is available to borrow right now.</h3>
+  <h5>Our private beta is by invitation only - request an invitation by providing your email and zipcode below.</h5>
+  <form action="/thankyou" method="POST">
+    <fieldset class="form-group">
+      <label for="emailforprivatebeta" class="form-control-label sr-only">Email address</label>
+      <input type="email" class="form-control" id="emailforprivatebeta" name="emailforprivatebeta" placeholder="Enter your email">
+      <small class="text-muted">We'll never share your email with anyone else.</small>
+    </fieldset>
+    <fieldset class="form-group">
+      <label for="zipcodeforprivatebeta" class="form-control-label sr-only">Your Zipcode</label>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" class="form-control" id="zipcodeforprivatebeta" name="zipcodeforprivatebeta" placeholder="Enter your zipcode">
+    </fieldset>
+    <button type="submit" class="btn btn-primary">Submit</button>
   </form>
 </div>
+<!--<div class="row">-->
+  <!--<form>-->
+    <!--<div class="form-group row">-->
+      <!--<label for="keywords" class="form-control-label sr-only">Your Zipcode</label>-->
+      <!--<div class="col-sm-offset-2 col-sm-8">-->
+        <!--<input type="text" class="form-control" id="user-zipcode" placeholder="Enter Your Zipcode">-->
+      <!--</div>-->
+    <!--</div>-->
+    <!--<div class="row col-sm-offset-5 col-sm-2">-->
+      <!--<button type="submit" class="btn btn-primary">Submit</button>-->
+    <!--</div>-->
+  <!--</form>-->
+<!--</div>-->
 
 {% endblock %}

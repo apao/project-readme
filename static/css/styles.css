@@ -1,10 +1,18 @@
-body { 
+
+body {
+    font-family: Roboto;
     background: url(/static/homepage-img2.jpg) no-repeat center center fixed;
     -webkit-background-size: cover; 
     -moz-background-size: cover; 
     -o-background-size: cover; 
     background-size: cover; 
      }
+
+.welcomemsg h1,
+.welcomemsg h3,
+.welcomemsg h5 {
+    color: white;
+}
 
 .panel-body {
     padding: 2em;

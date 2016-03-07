@@ -639,7 +639,7 @@ def get_sccl_availability(isbn):
     page = requests.get(sccl_search_url)
     pq_page = pq(page.content)
 
-    # find the sccl id no for the isbn on the page by css selector
+    # find the availability href for the isbn on the page by css selector
     availability_string = pq_page('a.circInfo.value.underlined').attr('href')
 
     if not availability_string:
@@ -647,7 +647,6 @@ def get_sccl_availability(isbn):
 
     availability_string = availability_string.replace('?', '.json?')
 
-    # with the sccl_id_num, get the sccl availability json
     sccl_avail_url = SCCL_AVAILABILITY_URL_BEG + availability_string
 
     avail_page = requests.get(sccl_avail_url)
@@ -689,7 +688,7 @@ def get_sfpl_availability(isbn):
 
     full_list_of_branch_avails = []
 
-    # requests.get the sccl search page using isbn
+    # requests.get the sfpl search page using isbn
     # turn SFPL into a templated string, {}
     sfpl_search_url = SFPL_SEARCH_URL_BEG + str(isbn) + SFPL_SEARCH_URL_END
 
@@ -705,7 +704,6 @@ def get_sfpl_availability(isbn):
 
     availability_string = availability_string.replace('?', '.json?')
 
-    # with the sccl_id_num, get the sccl availability json
     sfpl_avail_url = SFPL_AVAILABILITY_URL_BEG + availability_string
 
     avail_page = requests.get(sfpl_avail_url)
@@ -759,7 +757,6 @@ def get_smcl_availability(isbn):
 
     availability_string = availability_string.replace('?', '.json?')
 
-    # with the href, get the sccl availability json
     smcl_avail_url = SMCL_AVAILABILITY_URL_BEG + availability_string
 
     avail_page = requests.get(smcl_avail_url)
@@ -816,7 +813,7 @@ def get_availabilities_for_list_of_books(list_of_dicts):
 
     for dict_for_item in list_of_dicts:
         list_of_availability = get_sccl_avail_for_item(dict_for_item)
-            # append the dictionary to the list in order of original search results rank
+        # append the dictionary to the list in order of original search results rank
         list_of_dicts_with_availabilities.append(list_of_availability)
 
     return list_of_dicts_with_availabilities
@@ -861,7 +858,7 @@ def get_item_details(item_dict):
 
 
 # =============================================
-# FUNCTIONS FOR GEOCODING AND GEOLOCATION
+# FUNCTIONS FOR FUTURE GEOCODING AND GEOLOCATION
 # =============================================
 
 # https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=YOUR_API_KEY
@@ -977,8 +974,10 @@ def avails_to_markers(list_of_avails):
             marker_symbol = "library"
             marker["properties"]["description"] = "<div class=%s><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
             marker["properties"]["marker-symbol"] = marker_symbol
+            # marker["properties"]["marker-color"] = "#3ca0d3"
+            # marker["properties"]["marker-size"] = "large"
             marker_list.append(marker)
-        elif avail_copies == 0:
+        elif avail_copies == 0 or avail_copies == '0':
             marker_symbol = "roadblock"
             marker["properties"]["description"] = "<div class=%s>%s</div><p>Copies Unavailable: %s</p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
             marker["properties"]["marker-symbol"] = marker_symbol
