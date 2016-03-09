@@ -5,13 +5,13 @@ Project ReadMe is a Python-Flask webapp that empowers users to find library avai
 ## Technology Stack
 * Python
 * Flask
-* PyQuery
+* pyquery
 * pytest
 * SQLAlchemy
 * PostgreSQL
-* Javascript
-* JQuery
-* AJAX
+* Jinja2
+* JavaScript
+* jQuery
 * Bootstrap
 
 ## APIs
