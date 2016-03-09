@@ -25,10 +25,6 @@
         <div class="row coverimg">
           <img src="{{ dictionary.get('coverurl') }}" class="img-responsive" alt="cover for {{ dictionary.get('title') }}">
         </div>
-        <div class="row goodreadsinfo">
-          Goodreads:<br>
-          {{ dictionary.get('goodreads_info').goodreads_rating }} | {{ dictionary.get('goodreads_info').goodreads_ratings_count }} ratings
-        </div>
         <div class="row publisher">
             {{ dictionary.get('publisher') }}
         </div>
@@ -45,17 +41,19 @@
 
       <!-- BEGIN RIGHT COLUMN -->
       <div class="col-md-9">
+        <div class="row goodreadsinfo">
+          <h3>Ratings Information from <a href="http://www.goodreads.com/"><img src="../static/goodreads_misc_logo.jpg" width="20%"/></a></h3>
+          <strong>Average Rating:</strong> {{ dictionary.get('goodreads_info').goodreads_rating }} | {{ dictionary.get('goodreads_info').goodreads_ratings_count }} ratings
+          <br><strong>ISBN:</strong> {{ dictionary.get('goodreads_info').isbn13.isbn13 }}
+        </div>
         <div class="row summary">
             <h3>Summary</h3>
             {{ dictionary.get('summary') }}
         </div>
         <div class="row availability">
-          <h3>Library Availability</h3>
+          <h3>Library Availability <button type="button" id="geolocate" class="btn btn-primary btn-lg">Find Me on the Map!</button></h3>
           <div class="row map">
             <div id="map"></div>
-          </div>
-          <div class"row">
-            <button type="button" id="geolocate" class="btn btn-primary btn-lg">Find Me!</button>
           </div>
           <div class="table-responsive">
             <table class="table table-hover">
@@ -105,7 +103,7 @@
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v8',
     center: [-74.2588894, 40.70583],
-    zoom: 8
+    zoom: 10
   });
 
   map.on('style.load', function () {
@@ -168,7 +166,7 @@
 
   // Fly to user location based on browser geolocation
   $("#geolocate").click(function() {
-      console.log("We are inside FLY!");
+      console.log("We are inside geolocate js!");
       if (!navigator.geolocation) {
           geolocate.innerHTML = "Geolocation is not available.";
       } else {
@@ -177,6 +175,33 @@
               var latitude = position.coords.latitude;
               map.flyTo({
                   center: [longitude, latitude]
+              });
+              map.addSource('single-point', {
+                  "type": "geojson",
+                  "data": {
+                      "type": "FeatureCollection",
+                      "features": [{
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [longitude, latitude]
+                        },
+                        "properties": {
+                            "title": "Your Location",
+                            "marker-symbol": "star"
+                        }
+                      }]
+                  }
+              });
+
+              map.addLayer({
+                  "id": "point",
+                  "source": "single-point",
+                  "type": "circle",
+                  "paint": {
+                    "circle-radius": 10,
+                    "circle-color": "#007cbf"
+                  }
               });
               $('#geolocate').prop('disabled', true);
           };

@@ -185,6 +185,7 @@ def get_db_book_details(bookid):
 
     isbn13_id_list = [num.isbn13_id for num in current_book.isbn13s]
     
+    # TODO - Consider what to do if goodreadsinfo_matches returns an empty list
     goodreadsinfo_matches = GoodreadsInfo.query.filter(GoodreadsInfo.isbn13_id.in_(isbn13_id_list)).all()
     sorted_goodreadsinfo = list(sorted(goodreadsinfo_matches, key=lambda k: int(k.goodreads_ratings_count)))
     leading_goodreadsinfo_match = sorted_goodreadsinfo[0]

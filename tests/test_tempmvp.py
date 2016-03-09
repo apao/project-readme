@@ -15,8 +15,7 @@ def _validate_result(current_result):
 
 
 def test_search_for_print_books():
-    """ GIVEN: worldcat search URL
-
+    """ Check if tempmvp.search_for_print_books(url) returns the correct number of results.
     """
     url = "http://www.worldcat.org/search?q=lean+in&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
     results = tempmvp.search_for_print_books(url)

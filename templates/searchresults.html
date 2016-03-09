@@ -43,13 +43,16 @@
 
 {% block javascript %}
 <script>
-  function addSpinner(evt) {
-      $('#loading').attr('width', '300')
-      $('#loading').attr('height', '300')
-      $('#loading').addClass('glyphicon glyphicon-refresh spinning');
+
+  function addSpinner() {
+    var spinner = '<i class="fa fa-spinner fa-pulse fa-3x"></i>'
+    $('#loading').attr("width", "300px")
+    $('#loading').attr("height", "300px")
+    $('#loading span').append(spinner);
   }
 
   $('.row.title').click(addSpinner);
+
 </script>
 {% endblock %}
 
