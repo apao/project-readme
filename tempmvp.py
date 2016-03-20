@@ -564,8 +564,224 @@ def get_isbns_from_urls_list(list_of_dicts):
 
 
 # ===================================
-# PRINT SEARCH FOR SCCL AVAILABILITY 
+# PRINT SEARCH FOR LIBRARY AVAILABILITY
 # ===================================
+
+class BaseBibliocommonsAvailabilitySearch(object):
+    """Abstract class for availability search in a library catalogue powered by Bibliocommons."""
+
+    availability_url_beg = None
+
+    def load_availability(self, isbn):
+
+        full_list_of_branch_avails = []
+
+        # requests.get the bibliocommons search page using isbn
+        bibliocommons_search_url = self.create_search_url(isbn) # search_url_beg + str(isbn) + search_url_end
+
+        # requests.get the contents of the page and convert to pq object
+        page = requests.get(bibliocommons_search_url)
+
+        avail_url = self.get_avail_url_from_serp(page.content)
+        if not avail_url:
+            return full_list_of_branch_avails
+
+        avail_page = requests.get(avail_url)
+        json_avail_page = json.loads(avail_page.text)
+        html_section_only = json_avail_page["html"]
+
+        self.populate_availability_by_avail_url(html_section_only, full_list_of_branch_avails)
+
+        # for current_branch_avails in full_list_of_branch_avails:
+        #     current_branch_avails['bibliocommons_search_url'] = bibliocommons_search_url
+
+        return full_list_of_branch_avails
+
+    def get_avail_url_from_serp(self, page_html):
+        pq_page = pq(page_html)
+        # find the availability href for the isbn on the page by css selector
+        availability_string = pq_page('a.circInfo.value.underlined').attr('href')
+
+        if not availability_string:
+            return None
+
+        availability_string = availability_string.replace('?', '.json?')
+        avail_url = self.create_avail_url(availability_string)
+        return avail_url
+
+    def populate_availability_by_avail_url(self, html_section_only, full_list_of_branch_avails):
+        """Given availability URL, get dictionary of branch availabilities.
+        """
+        pq_html_section = pq(html_section_only)
+
+        pq_ths = pq_html_section('thead').eq(0).find('th')
+        headers = [pq_th.text() for pq_th in pq_ths.items()]
+
+        non_thead_tr_list = pq_html_section.find('tr').filter(lambda i, this: not pq(this).parents('thead')).items()
+
+        for pq_tr in non_thead_tr_list:
+            status_details = self.status_details_from_tr_list(headers, pq_tr)
+            full_list_of_branch_avails.append(status_details)
+
+        return full_list_of_branch_avails
+
+    def status_details_from_tr_list(self, headers, pq_tr):
+        """Given pq object of status rows, create branch copy status details as dicts and add them to the full list."""
+
+        list_of_status_details = []
+        dict_of_status_details = {}
+
+        for pq_td in pq_tr.find('td').items():
+            list_of_status_details.append(pq_td.text())
+
+        library_status_details = dict(zip(headers, list_of_status_details))
+
+        branch_name_and_copies = library_status_details['Location'].split('(')  # 0-index item is branch name and num of copies
+
+        if len(branch_name_and_copies) == 1:
+            branch_name_and_copies.append('1')  # Add a num of copies for those without multiple
+        else:
+            branch_name_and_copies[1] = branch_name_and_copies[1][:-1] # Num of copies without parens
+
+        dict_of_status_details['branch_name'] = branch_name_and_copies[0].rstrip()
+        dict_of_status_details['num_of_copies'] = int(branch_name_and_copies[1])
+        dict_of_status_details['branch_section'] = library_status_details['Collection']
+        dict_of_status_details['call_no'] = library_status_details['Call No']
+        dict_of_status_details['status'] = library_status_details['Status']
+
+        return dict_of_status_details
+
+    def create_search_url(self, isbn):
+        """With ISBN, creates ISBN-specific library search url to be passed to requests."""
+
+        raise NotImplementedError
+
+    def create_avail_url(self, availability_string):
+        """With availability string, creates library availability search url."""
+
+        raise NotImplementedError
+
+    def normalize_availability(self, dictlist):
+        """With list of availability dicts, create normalized set of individual dicts by copy."""
+
+        raise NotImplementedError
+
+
+class SCCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
+    """With ISBN, creates ISBN-specific SCCL library search url to be passed to requests."""
+
+    availability_url_beg = "https://sccl.bibliocommons.com"
+
+    def create_search_url(self, isbn):
+        search_url = SCCL_SEARCH_URL_BEG + str(isbn) + SCCL_SEARCH_URL_END
+        return search_url
+
+    def create_avail_url(self, availability_string):
+        avail_url = self.availability_url_beg + availability_string
+        return avail_url
+
+    def normalize_availability(self, dictlist):
+        """Return normalized availability to pass to javascript for map rendering."""
+
+        branch_dict = {}
+
+        for avail in dictlist:
+            current_branch = avail.get('branch_name')
+            current_call_num = avail.get('call_no')
+            current_branch_section = avail.get('branch_section')
+            current_num_of_copies = avail.get('num_of_copies')
+            current_url = avail.get('sccl_search_url')
+            branch_dict[current_branch] = branch_dict.get(current_branch, {})
+            branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+            branch_dict[current_branch]['search_url'] = current_url
+            if avail.get('status') == 'Available':
+                branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+                branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+            elif "Due" in avail.get('status') or "Holdshelf" in avail.get('status'):
+                branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+            else:
+                continue
+
+        return branch_dict
+
+
+class SMCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
+    """With ISBN, creates ISBN-specific SMCL library search url to be passed to requests."""
+
+    availability_url_beg = "https://smcl.bibliocommons.com"
+
+    def create_search_url(self, isbn):
+        search_url = SMCL_SEARCH_URL_BEG + str(isbn)
+        return search_url
+
+    def create_avail_url(self, availability_string):
+        avail_url = self.availability_url_beg + availability_string
+        return avail_url
+
+    def normalize_availability(self, dictlist):
+        """Return normalized availability to pass to javascript for map rendering."""
+
+        branch_dict = {}
+
+        for avail in dictlist:
+            current_branch = avail.get('branch_name')
+            current_call_num = avail.get('call_no')
+            current_branch_section = avail.get('branch_section')
+            current_num_of_copies = avail.get('num_of_copies')
+            current_url = avail.get('smcl_search_url')
+            branch_dict[current_branch] = branch_dict.get(current_branch, {})
+            branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+            branch_dict[current_branch]['search_url'] = current_url
+            if avail.get('status') == 'CHECK SHELF':
+                branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+                branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+            elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
+                branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+            else:
+                continue
+
+        return branch_dict
+
+
+class SFPLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
+    """With ISBN, creates ISBN-specific SFPL library search url to be passed to requests."""
+
+    availability_url_beg = "https://sfpl.bibliocommons.com"
+
+    def create_search_url(self, isbn):
+        search_url = SFPL_SEARCH_URL_BEG + str(isbn) + SFPL_SEARCH_URL_END
+        return search_url
+
+    def create_avail_url(self, availability_string):
+        avail_url = self.availability_url_beg + availability_string
+        return avail_url
+
+    def normalize_availability(self, dictlist):
+        """Return normalized availability to pass to javascript for map rendering."""
+
+        branch_dict = {}
+
+        for avail in dictlist:
+            current_branch = avail.get('branch_name')
+            current_call_num = avail.get('call_no')
+            current_branch_section = avail.get('branch_section')
+            current_num_of_copies = avail.get('num_of_copies')
+            current_url = avail.get('sfpl_search_url')
+            branch_dict[current_branch] = branch_dict.get(current_branch, {})
+            branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
+            branch_dict[current_branch]['search_url'] = current_url
+            if avail.get('status') == 'CHECK SHELF':
+                branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
+                branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
+            elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
+                branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+            else:
+                continue
+
+        return branch_dict
+
+
+
 
 def get_sccl_availability(isbn):
     """Given an ISBN, provides availability for an item in the Santa Clara County Library System."""
