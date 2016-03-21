@@ -7,7 +7,8 @@ from flask_debugtoolbar import DebugToolbarExtension
 
 from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db, LibraryBranch, LibrarySystem
 
-from tempmvp import get_crawl_results, get_item_details, get_sccl_availability, normalize_sccl_availability, normalize_smcl_availability, get_smcl_availability, normalize_sfpl_availability, get_sfpl_availability, avails_to_markers
+from tempmvp import get_crawl_results, get_item_details, normalize_sccl_availability, normalize_smcl_availability, normalize_sfpl_availability, avails_to_markers
+from tempmvp import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch
 
 from dbfunctions import get_db_results, add_new_book, add_new_query, get_db_book_details
 
@@ -20,7 +21,7 @@ app = Flask(__name__)
 app.secret_key = "ABC"
 
 # Normally, if you use an undefined variable in Jinja2, it fails silently.
-# This is horrible. Fix this so that, instead, it raises an error.
+# With this line, it raises an error instead.
 app.jinja_env.undefined = StrictUndefined
 
 
@@ -49,24 +50,8 @@ def search_page():
 def get_search_results():
     """Get, store and render results based on user keyword search."""
 
-    # CACHING - using your DB as a cache
-
-    # query db to see if string has been searched for
-    
-    # if queried and if NOT queried should return the same result
-    ### This could be a populated model, a dict, or something else, TBD by you
-    ### In this case, you should get used to passing around models...
-    # if NOT queried, do crawl
-    ### Populate a model "book = Book()""
-    ### book.name = 'hi there'
-
-    # IF queried, do NOT crawl, and return results
-
-    # search_type = request.form["searchtype"]
     search_keywords = request.form.get("keywords")
     search_keywords = search_keywords.strip().lower()
-
-    # if search_type == "print":
 
     matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
 
@@ -91,18 +76,6 @@ def get_search_results():
 
     return render_template("searchresults.html", list=final_results)
 
-    # elif search_type == "ebooks":
-    #
-    #     return render_template("base.html")
-    #
-    # else:
-    #
-    #     return "Something is not working!"
-
-
-
-
-
 
 @app.route('/details/<int:bookid>')
 def item_details(bookid):
@@ -110,12 +83,14 @@ def item_details(bookid):
 
     book_details = get_db_book_details(bookid)
     isbn13_list = book_details['ISBN-13']
-    # marker_list = []
+    sccl_searcher = SCCLAvailabilitySearch()
+    smcl_searcher = SMCLAvailabilitySearch()
+    sfpl_searcher = SFPLAvailabilitySearch()
 
     for isbn13 in isbn13_list:
-        norm_sccl_avail_dict = normalize_sccl_availability(get_sccl_availability(isbn13))
-        norm_smcl_avail_dict = normalize_smcl_availability(get_smcl_availability(isbn13))
-        norm_sfpl_avail_dict = normalize_sfpl_availability(get_sfpl_availability(isbn13))
+        norm_sccl_avail_dict = normalize_sccl_availability(sccl_searcher.load_availability(isbn13))
+        norm_smcl_avail_dict = normalize_smcl_availability(smcl_searcher.load_availability(isbn13))
+        norm_sfpl_avail_dict = normalize_sfpl_availability(sfpl_searcher.load_availability(isbn13))
         dict_to_evaluate = norm_sccl_avail_dict.copy()
         dict_to_evaluate.update(norm_smcl_avail_dict)
         dict_to_evaluate.update(norm_sfpl_avail_dict)
@@ -130,46 +105,10 @@ def item_details(bookid):
         else:
             continue
 
-        # key_list = norm_avail_dict.keys()
-        # for branch in key_list:
-        #     lib_branch_obj = LibraryBranch.query.filter_by(branch_name=branch).first()
-        #     if lib_branch_obj:
-        #         norm_avail_dict[branch]['branch_geo'] = lib_branch_obj.branch_geo
-        #     norm_avail_dict[branch]['branch_name'] = branch
-
-        agg_norm_avail_list = dict_to_evaluate.values()
+        # Filtering out branches for which the database does not have a correlated library system name
+        agg_norm_avail_list = [branch_dict for branch_dict in dict_to_evaluate.values() if branch_dict.get('sys_name')]
         newlist = sorted(agg_norm_avail_list, key=lambda k: (k['sys_name'], k['branch_name']))
         returned_marker_list = avails_to_markers(agg_norm_avail_list)
-
-        # for avail in norm_avail_list:
-        #     branch = avail.get('branch_name')
-        #     avail_copies = avail.get('avail_copies', 0)
-        #     unavail_copies = avail.get('unavail_copies', 0)
-        #     where_to_find = avail.get('sccl_where_to_find')
-        #     url = avail.get('sccl_search_url')
-        #     branch_geo = avail.get('branch_geo')
-        #     branch_geo_list = branch_geo.split(',')
-        #     branch_geo_long = float(branch_geo_list[0])
-        #     branch_geo_lat = float(branch_geo_list[1])
-        #     marker = {}
-        #     marker["type"] = "Feature"
-        #     marker["properties"] = {}
-        #     marker["geometry"] = {}
-        #     marker["geometry"]["type"] = "Point"
-        #     marker["geometry"]["coordinates"] = [branch_geo_long, branch_geo_lat]
-        #
-        #     if avail_copies:
-        #         marker_symbol = "library"
-        #         marker["properties"]["description"] = "<div class=%s><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
-        #         marker["properties"]["marker-symbol"] = marker_symbol
-        #         marker_list.append(marker)
-        #     elif avail_copies == 0:
-        #         marker_symbol = "roadblock"
-        #         marker["properties"]["description"] = "<div class=%s>%s</div><p>Copies Unavailable: %s</p><a href=%s target=\"_blank title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
-        #         marker["properties"]["marker-symbol"] = marker_symbol
-        #         marker_list.append(marker)
-        #     else:
-        #         continue
 
         final_marker_list = {
             "type": "FeatureCollection",
@@ -182,7 +121,6 @@ def item_details(bookid):
             continue
 
     return render_template("bookdetails.html", dictionary=book_details, avail_list=[], marker_list=0)
-
 
 
 @app.route('/availability.geojson')

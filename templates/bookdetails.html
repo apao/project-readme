@@ -43,8 +43,12 @@
       <div class="col-md-9">
         <div class="row goodreadsinfo">
           <h3>Ratings Information from <a href="http://www.goodreads.com/"><img src="../static/goodreads_misc_logo.jpg" width="20%"/></a></h3>
+          {% if dictionary.goodreads_info %}
           <strong>Average Rating:</strong> {{ dictionary.get('goodreads_info').goodreads_rating }} | {{ dictionary.get('goodreads_info').goodreads_ratings_count }} ratings
           <br><strong>ISBN:</strong> {{ dictionary.get('goodreads_info').isbn13.isbn13 }}
+          {% else %}
+          <p>No ratings information available.</p>
+          {% endif %}
         </div>
         <div class="row summary">
             <h3>Summary</h3>
@@ -97,7 +101,7 @@
 <script>
   mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhbyIsImEiOiJjaWwwaGhqMm4xdjB1dXltM2NhZGl5NHY2In0.PlgVAjJ-m_7BunI7VwjPGA';
 
-  var markers = {{ marker_list|safe }};
+  var markers = {{ marker_list | tojson | safe }};
 
   var map = new mapboxgl.Map({
     container: 'map',
