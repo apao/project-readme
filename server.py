@@ -8,7 +8,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from model import Query, connect_to_db, LibraryBranch
 from model import get_db_results, add_new_book, add_new_query, get_db_book_details
 
-from tempmvp import get_crawl_results, get_item_details
+from book_loader import get_crawl_results, get_item_details
 from availability_search import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch, normalize_sccl_availability, normalize_smcl_availability, normalize_sfpl_availability
 
 """
