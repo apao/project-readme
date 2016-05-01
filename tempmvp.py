@@ -52,17 +52,20 @@ def search_for_print_books(url):
     pq_results_page_xml = pq(results_page_xml.content)
 
     # Revised edition using pquery objects only
+    # TODO - add documentation why we use .eq(3)
     content_xml = pq_results_page_xml('content').eq(3).text()
     pq_content = pq(content_xml)
     pq_results_list = pq_content('table.table-results tr.menuElem').items()
 
     for idx, pq_result in enumerate(pq_results_list):
+        # TODO - consider moving contents of for loop into a function
+        # TODO - so this looks like dict_for_result = _process_pq_result(pq_result)
+        # TODO - once we pull this out into a function, we can write a test for it!
         # read the raw_rank from the TR directly
         raw_rank = pq_result('td.num').eq(1).text()
         # slice the raw_rank to remove the end "."
         rank = int(raw_rank[:-1])
 
-        dict_for_result = {}
         # result_id = "result-"+str(rank)
 
         # rank_of_result: get the rank of result
@@ -86,6 +89,7 @@ def search_for_print_books(url):
         final_cover_url = HTTP_URL + cover_url
 
         # assign key-value to dictionary for the specific result
+        dict_for_result = dict()
         dict_for_result['rank'] = rank_of_result
         dict_for_result['title'] = book_title
         dict_for_result['author'] = final_author_list
@@ -102,13 +106,12 @@ def get_urls_by_search_keywords(user_search_keywords):
     """Provided user's search keywords, return list of search results, represented by
     a dictionary of general info and WorldCat url for each result."""
 
-    list_of_search_results = []
-
     # take a user's search keywords
     # convert string to match the format for the WorldCat search results page
     worldcat_ready_keywords = urllib.quote_plus(user_search_keywords)
 
     # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
+    # TODO - either use {} format or add spaces around +'s for readability
     worldcat_ready_url = WORLDCAT_SEARCH_URL+worldcat_ready_keywords+WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
 
     list_of_search_results = search_for_print_books(worldcat_ready_url)
@@ -335,11 +338,9 @@ def get_book_details_by_url(dict_of_item):
     
     # requests.get the contents of the page and convert to pq object
     page = requests.get(url)
+
+    # TODO - create a function that takes a string (page.content), this will make it easier to write a test
     pq_page = pq(page.content)
-    
-    # find the isbns on the page by their css selector and format them as a list
-    isbn_string = pq_page('#details-standardno').eq(0).text()
-    isbn_list = isbn_string.split(" ")
 
     # TITLE
     # >>> pq_details_page('h1.title').text()
@@ -377,7 +378,8 @@ def get_book_details_by_url(dict_of_item):
     # ['2', '2', '8', ' ']
     desc = pq_page('#details-description td').text()
     page_num = []
-    
+
+    # TODO - find more pages examples from worldcat and make sure we can cover more page formats
     for char in desc[desc.find('pages')-2::-1]:
         if not char.isdigit():
             break
@@ -389,20 +391,27 @@ def get_book_details_by_url(dict_of_item):
     # SUMMARY
     # >>> summary = pq_details_page('div.abstracttxt').text()
     summary = pq_page('div.abstracttxt').text()
-    
+
+    # find the isbns on the page by their css selector and format them as a list
+    isbn_string = pq_page('#details-standardno').eq(0).text()
+    isbn_list = isbn_string.split(" ")
+
     # for any list item that is an ISBN of a particular length, assign the appropriate key and value
     for item in isbn_list:
+        # TODO if item == ISBN:  continue
         if item != "ISBN:" and len(item) == 10:
             isbn10_list.append(str(item))
         elif item != "ISBN:" and len(item) == 13:
             isbn13_list.append(str(item))
-    
+
+    # TODO - consider promoting these to model.ISBN10 and model.ISBN13
     book_details_dict[isbn_10_key] = isbn10_list
     book_details_dict[isbn_13_key] = isbn13_list
 
     coverurl = dict_of_item['coverurl']
 
     # GOODREADS INFO
+    # TODO - pull goodreads info out of this function so we can create model.GoodreadsInfo
     isbn_to_goodreads_list = [get_goodreads_info_by_isbn13(isbn13) for isbn13 in isbn13_list]
 
     # TODO - Simplify k.values()[0] issue and sorted[0].keys()[0]
@@ -410,6 +419,7 @@ def get_book_details_by_url(dict_of_item):
     # lead_isbn13_by_ratings_count = sortedlist[0].keys()[0]
 
     # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
+    # TODO - consider promoting book_details_dict to model.Book
     book_details_dict['worldcaturl'] = url
     book_details_dict['title'] = title
     book_details_dict['author'] = author_list
@@ -727,13 +737,13 @@ def get_sccl_avail_for_item(dict_of_item):
 # =============================================
 
 def get_crawl_results(keywords):
-
+    # TODO - collapse functions together?
     results = get_urls_by_search_keywords(keywords)
     return results
 
 
 def get_item_details(item_dict):
-
+    # TODO - collapse functions together?
     details = get_book_details_by_url(item_dict)
     return details
 

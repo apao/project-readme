@@ -67,6 +67,7 @@ def load_librarybranches():
 if __name__ == "__main__":
     connect_to_db(app)
 
+    # Creates all models associated with app
     db.create_all()
 
     # Import different types of data

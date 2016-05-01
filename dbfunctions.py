@@ -35,6 +35,7 @@ def add_new_query(keywords):
 def add_new_book(queryid, newdict, rank):
     """Given a dict about a book, add the book details to the db."""
 
+    # TODO - push model.Book creation upstream
     new_book = Book(
                     worldcaturl=newdict['worldcaturl'], 
                     title=newdict['title'], 
@@ -50,6 +51,9 @@ def add_new_book(queryid, newdict, rank):
     # AUTHOR(S)
     author_list = newdict['author']
 
+    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
+    # TODO - so you can do Book.authors = [Author(), Author()]
+    # TODO - work on caching behavior
     for author in author_list:
         # CONSIDER ADDING CONDITIONAL TO MAKE SURE AUTHORS DO NOT REPEAT IN THE AUTHOR TABLE
         # Adds an author to the author table
@@ -61,6 +65,7 @@ def add_new_book(queryid, newdict, rank):
         db.session.add(new_book_author)
         db.session.flush()
 
+    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
     # ISBN-10's
     isbn10_list = newdict['ISBN-10']
 
@@ -77,6 +82,7 @@ def add_new_book(queryid, newdict, rank):
         db.session.add(new_isbn13)
         db.session.flush()
 
+    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
     # GOODREADS INFO
     isbn_to_goodreads_list = newdict['isbn_to_goodreads_list']
 
@@ -92,6 +98,7 @@ def add_new_book(queryid, newdict, rank):
         db.session.add(new_goodreadsinfo)
         db.session.flush()
 
+    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
     # FORMAT & BOOKFORMAT
     format = newdict['format']
     new_format = Format(format_type=format)
@@ -102,6 +109,7 @@ def add_new_book(queryid, newdict, rank):
     db.session.add(new_book_format)
     db.session.flush()
 
+    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
     # QUERY & QUERYBOOK
     new_query_book = QueryBook(query_id=queryid, book_id=new_book.book_id, rank_of_result=rank)
     db.session.add(new_query_book)
@@ -155,7 +163,6 @@ def get_db_results(queryid):
 
 def get_db_book_details(bookid):
     """Return a dictionary for a book from the database by searching for bookid."""
-
     current_book = Book.get_book_by_id(bookid)
 
     result_dict = {}

@@ -13,6 +13,87 @@ from tempmvp import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabi
 from dbfunctions import get_db_results, add_new_book, add_new_query, get_db_book_details
 
 import json
+"""
+SUMMARY
+# STEP ZERO:
+To initialize Project ReadMe, Developer must complete the following:
+* In seed.py, create and assign a list of Library System names. Iterate through the list of Library System names to populate the Library System database. (See seed.py for hard-coded example.)
+
+* To populate the Library Branch database, first, create libdata.txt which is a pipe-delimited file with the following information:
+** # TODO - flesh out fields for libdata.txt
+
+* To complete the population of the Library Branch database, in seed.py, add the appropriate filepath to the libdata.txt file in the load_librarybranches() function.
+
+* With PostgreSQL running, on the command line (such as Terminal), do the following:
+** `virtualenv env`
+** `source env/bin/activate`
+
+* Once the env is confirmed to be activated, with PostgreSQL running, do the following:
+** `createdb projectreadme`
+** `python seed.py`
+
+* If the seeding process is successful, you should see the "Load Complete." message. Once you see that message, you can spin up the local server by running:
+** `python server.py`
+
+* With the local server and database running, visit localhost:5000/search in your browser to use the app.
+
+# STEP ONE:
+User visits search page (/search).
+
+# STEP TWO:
+User executes a text keyword search which triggers app to...
+ * crawl WorldCat.org for English-language print books
+
+ * cache in the database WorldCat.org's top 10 matching results, including:
+ ** WorldCat.org's rank of the result for the specific keyword search
+ ** Title
+ ** Author
+ ** WorldCat.org's book details page URL
+ ** WorldCat.org's book cover image URL
+
+ * crawl each of the top 10 WorldCat.org book details pages and extract the following additional information:
+ ** ISBNs (both ISBN-10s and ISBN-13s)
+ ** Publisher
+ ** Page Count
+ ** Book Format (all print books currently, as limited by search categorization)
+ ** Summary
+
+ * in addition, for each result's ISBNs, we read from the Goodreads API
+ ** Goodreads Rating
+ ** Goodreads Ratings Count
+
+ * after all this, we render the results on the page (/results), displaying only the following:
+ ** Cover Image
+ ** Title
+ ** Author
+ ** Publisher
+ ** Book Format
+ ** Page Count
+
+# STEP THREE:
+User clicks on one of the results...which leads to the app loading book availability / rendering a book details page with the following info:
+
+* From the WorldCat.org database cache:
+** Cover Image
+** Title
+** Publisher
+** Page Count
+** Summary
+
+* From Goodreads database cache:
+** Goodreads Rating
+** Goodreads Ratings Count
+
+* For each Library System supported by Project ReadMe, the app executes an availability search using the ISBN of the book, which waits for all supported library systems to return before rendering:
+
+* Both a Map and a Table with the following information:
+** Library System Name
+** Library Branch Name
+** Number of Available Copies (if any)
+** Where to Find the Copy (by section and/or call number)
+** Library System-specific URL for the book (BROKEN AND CURRENTLY ON MAP ONLY)
+
+"""
 
 
 app = Flask(__name__)
@@ -65,11 +146,15 @@ def get_search_results():
 
         final_results = []
 
+        # TODO - document what initial results are, they are a list of parsed worldcat search results
         for item in initial_results:
 
             new_dict = get_item_details(item)
             rank = item['rank']
             new_dict['rank'] = rank
+
+            # TODO - if get_item_details returns a bunch of model.Book/model.ISBN*/model.GoodreadsInfo
+            # TODO - update add_new_book
             new_book_id = add_new_book(new_query_id, new_dict, rank)
             new_dict['bookid'] = new_book_id
             final_results.append(new_dict)
@@ -81,30 +166,42 @@ def get_search_results():
 def item_details(bookid):
     """Show details about an item."""
 
+    # TODO - remove get_db_book_details entirely and rely on objects getting returned
+    # TODO - update template code to expect model.Book
     book_details = get_db_book_details(bookid)
     isbn13_list = book_details['ISBN-13']
+
+    # TODO - Convert this to a list of [SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch]
     sccl_searcher = SCCLAvailabilitySearch()
     smcl_searcher = SMCLAvailabilitySearch()
     sfpl_searcher = SFPLAvailabilitySearch()
 
     for isbn13 in isbn13_list:
+        # TODO - move contents of for loop to its own function so we have availability_for_isbn(isbn13)
+
+        # TODO - convert this to iterate over list of searchers
+        # TODO - move normalize_*_availability onto their respective search classes
         norm_sccl_avail_dict = normalize_sccl_availability(sccl_searcher.load_availability(isbn13))
         norm_smcl_avail_dict = normalize_smcl_availability(smcl_searcher.load_availability(isbn13))
         norm_sfpl_avail_dict = normalize_sfpl_availability(sfpl_searcher.load_availability(isbn13))
+
+        # TODO - add documentation as to what this is doing
+        # TODO - Write a test for dict_to_evaluate?
         dict_to_evaluate = norm_sccl_avail_dict.copy()
         dict_to_evaluate.update(norm_smcl_avail_dict)
         dict_to_evaluate.update(norm_sfpl_avail_dict)
-        if dict_to_evaluate:
-            key_list = dict_to_evaluate.keys()
-            for branch in key_list:
-                lib_branch_obj = LibraryBranch.query.filter_by(branch_name=branch).first()
-                if lib_branch_obj:
-                    dict_to_evaluate[branch]['branch_geo'] = lib_branch_obj.branch_geo
-                    dict_to_evaluate[branch]['sys_name'] = lib_branch_obj.library_system.sys_name
-                dict_to_evaluate[branch]['branch_name'] = branch
-        else:
+        if not dict_to_evaluate:
             continue
 
+        key_list = dict_to_evaluate.keys()
+        for branch in key_list:
+            lib_branch_obj = LibraryBranch.query.filter_by(branch_name=branch).first()
+            if lib_branch_obj:
+                dict_to_evaluate[branch]['branch_geo'] = lib_branch_obj.branch_geo
+                dict_to_evaluate[branch]['sys_name'] = lib_branch_obj.library_system.sys_name
+            dict_to_evaluate[branch]['branch_name'] = branch
+
+        # TODO - move marker list creation to a separate function called marker_list(dict_to_evaluate)
         # Filtering out branches for which the database does not have a correlated library system name
         agg_norm_avail_list = [branch_dict for branch_dict in dict_to_evaluate.values() if branch_dict.get('sys_name')]
         newlist = sorted(agg_norm_avail_list, key=lambda k: (k['sys_name'], k['branch_name']))
@@ -115,11 +212,13 @@ def item_details(bookid):
             "features": returned_marker_list
         }
 
+        # TODO -
         if agg_norm_avail_list:
             return render_template("bookdetails.html", dictionary=book_details, avail_list=newlist, marker_list=final_marker_list)
         else:
             continue
 
+    # NOTE - we would only get here if there are no matches on ISBNs
     return render_template("bookdetails.html", dictionary=book_details, avail_list=[], marker_list=0)
 
 
