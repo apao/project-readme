@@ -2,17 +2,15 @@
 
 from jinja2 import StrictUndefined
 
-from flask import Flask, render_template, redirect, request, flash, session, url_for
+from flask import Flask, render_template, request
 from flask_debugtoolbar import DebugToolbarExtension
 
-from model import Book, Author, ISBN10, ISBN13, Query, QueryBook, connect_to_db, db, LibraryBranch, LibrarySystem
+from model import Query, connect_to_db, LibraryBranch
+from model import get_db_results, add_new_book, add_new_query, get_db_book_details
 
-from tempmvp import get_crawl_results, get_item_details, normalize_sccl_availability, normalize_smcl_availability, normalize_sfpl_availability, avails_to_markers
-from tempmvp import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch
+from tempmvp import get_crawl_results, get_item_details
+from availability_search import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch, normalize_sccl_availability, normalize_smcl_availability, normalize_sfpl_availability
 
-from dbfunctions import get_db_results, add_new_book, add_new_query, get_db_book_details
-
-import json
 """
 SUMMARY
 # STEP ZERO:
@@ -34,6 +32,10 @@ To initialize Project ReadMe, Developer must complete the following:
 
 * If the seeding process is successful, you should see the "Load Complete." message. Once you see that message, you can spin up the local server by running:
 ** `python server.py`
+
+* Get Goodreads API Secret and Key (http://www.goodreads.com/api), and set the following environment variables:
+** `GOODREADS_API_SECRET=[Insert your Goodreads Secret here.]`
+** `GOODREADS_API_KEY=[Insert your Goodreads Key here.]`
 
 * With the local server and database running, visit localhost:5000/search in your browser to use the app.
 
@@ -205,7 +207,7 @@ def item_details(bookid):
         # Filtering out branches for which the database does not have a correlated library system name
         agg_norm_avail_list = [branch_dict for branch_dict in dict_to_evaluate.values() if branch_dict.get('sys_name')]
         newlist = sorted(agg_norm_avail_list, key=lambda k: (k['sys_name'], k['branch_name']))
-        returned_marker_list = avails_to_markers(agg_norm_avail_list)
+        returned_marker_list = _avails_to_markers(agg_norm_avail_list)
 
         final_marker_list = {
             "type": "FeatureCollection",
@@ -222,13 +224,6 @@ def item_details(bookid):
     return render_template("bookdetails.html", dictionary=book_details, avail_list=[], marker_list=0)
 
 
-@app.route('/availability.geojson')
-def check_availability(bookid):
-    """Check library availability for an item."""
-
-    pass
-
-
 @app.route('/about')
 def about_page():
     """About page."""
@@ -236,34 +231,46 @@ def about_page():
     return render_template("about.html")
 
 
-# @app.route('/bookrecs')
-# def connect_to_bookrecs():
-#     """Book Recommendations page - connect to Emma's app."""
-#
-#     return render_template("bookrecs.html")
+def _avails_to_markers(list_of_avails):
+    """Return marker geojson based on list of availabilities."""
 
+    marker_list = []
 
-# @app.route('/contact')
-# def contact_page():
-#     """Contact Us page."""
-#
-#     return render_template("contact.html")
-#
-#
-# @app.route('/register')
-# def registration_page():
-#     """User registration page."""
-#
-#     return render_template("register.html")
-#
-#
-# @app.route('/login')
-# def login_page():
-#     """Log In page."""
-#
-#     return render_template("login.html")
+    for avail in list_of_avails:
+        branch = avail.get('branch_name')
+        avail_copies = avail.get('avail_copies', 0)
+        unavail_copies = avail.get('unavail_copies', 0)
+        where_to_find = avail.get('where_to_find')
+        url = avail.get('search_url')
+        branch_geo = avail.get('branch_geo')
+        branch_geo_list = branch_geo.split(',')
+        branch_geo_long = float(branch_geo_list[0])
+        branch_geo_lat = float(branch_geo_list[1])
+        marker = {}
+        marker["type"] = "Feature"
+        marker["properties"] = {}
+        marker["geometry"] = {}
+        marker["geometry"]["type"] = "Point"
+        marker["geometry"]["coordinates"] = [branch_geo_long, branch_geo_lat]
 
+        if avail_copies:
+            marker_symbol = "library"
+            # branch = branch.decode('utf-8')
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            # marker["properties"]["marker-color"] = "blue"
+            # marker["properties"]["marker-size"] = "large"
+            marker_list.append(marker)
+        elif avail_copies == 0 or avail_copies == '0':
+            marker_symbol = "harbor"
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Unavailable: %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            # marker["properties"]["marker-color"] = "red"
+            marker_list.append(marker)
+        else:
+            continue
 
+    return marker_list
 
 
 if __name__ == "__main__":
