@@ -2,7 +2,7 @@ import os
 import requests
 import urllib
 from pyquery import PyQuery as pq
-
+from model import db, Book, Author, ISBN10, ISBN13, GoodreadsInfo
 WORLDCAT_STANDARD_URL = "http://www.worldcat.org"
 WORLDCAT_SEARCH_URL = "http://www.worldcat.org/search?q="
 WORLDCAT_FILTER_LANG_EN_PRINT_ONLY = "&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined"
@@ -13,7 +13,7 @@ HTTP_URL = "http:"
 def get_crawl_results(keywords):
     """Provided user's search keywords, return list of search results, represented by
     a dictionary of general info and WorldCat url for each result."""
-
+    # TODO - consider renaming function to worldcat_ids_from_search_results_page
     # take a user's search keywords
     # convert string to match the format for the WorldCat search results page
     worldcat_ready_keywords = urllib.quote_plus(keywords)
@@ -21,208 +21,196 @@ def get_crawl_results(keywords):
     # http://www.worldcat.org/search?q=[ USER KEYWORDS ]&fq=%20(%28x0%3Abook+x4%3Aprintbook%29)%20%3E%20ln%3Aeng&se=&sd=&qt=facet_fm_checkbox&refinesearch=true&refreshFormat=undefined
     worldcat_ready_url = WORLDCAT_SEARCH_URL + worldcat_ready_keywords + WORLDCAT_FILTER_LANG_EN_PRINT_ONLY
 
-    list_of_search_results = search_for_print_books(worldcat_ready_url)
+    # requests.get the search results page and
+    results_page_xml = requests.get(worldcat_ready_url)
+
+    list_of_search_results = search_for_print_books(results_page_xml.content)
 
     return list_of_search_results
 
-
-def search_for_print_books(url):
+# TODO - change this function so this returns ONLY a list of oclc_ids IN ORDER, we do not care about the rank, Book objects, or others
+def search_for_print_books(xml_content):
     """Given the url for a WorldCat search results page of English-language print books,
     returns a dictionary about the first 10 search results."""
 
-    list_of_search_results = []
-
-    # requests.get the search results page and
-    results_page_xml = requests.get(url)
-
     # use pyquery to query the results_page_xml
-    pq_results_page_xml = pq(results_page_xml.content)
+    pq_results_page_xml = pq(xml_content)
 
-    # Revised edition using pquery objects only
     # TODO - add documentation why we use .eq(3)
+    # For each WorldCat search results page, there are four sets of content tags.
+    # For our purposes, we only care about the HTML text within the last set of content tags.
     content_xml = pq_results_page_xml('content').eq(3).text()
     pq_content = pq(content_xml)
-    pq_results_list = pq_content('table.table-results tr.menuElem').items()
 
-    for idx, pq_result in enumerate(pq_results_list):
-        # TODO - consider moving contents of for loop into a function
-        # TODO - so this looks like dict_for_result = _process_pq_result(pq_result)
-        # TODO - once we pull this out into a function, we can write a test for it!
-        # read the raw_rank from the TR directly
-        raw_rank = pq_result('td.num').eq(1).text()
-        # slice the raw_rank to remove the end "."
-        rank = int(raw_rank[:-1])
+    oclc_id_results_list = [i.text() for i in pq_content('div.oclc_number').items()]
 
-        # result_id = "result-"+str(rank)
-
-        # rank_of_result: get the rank of result
-        rank_of_result = rank
-        # book_title: get the book title
-        book_title = pq_result('div.name strong').text()
-        # author: get the book author(s) and slice to remove the "by " at the beginning
-        author_string = pq_result('div.author').text()[3:]
-        author_list = author_string.split(";")
-        final_author_list = []
-        for author in author_list:
-            author = author.strip()
-            final_author_list.append(author)
-
-        # worldcat_url: find href result with id="result-1" and create the new url to store in the dict
-        result_href_string = pq_result('div.name a').attr('href')
-        new_url = WORLDCAT_STANDARD_URL + result_href_string
-
-        # cover_url:
-        cover_url = pq_result('td.coverart img').attr('src')
-        final_cover_url = HTTP_URL + cover_url
-
-        # assign key-value to dictionary for the specific result
-        dict_for_result = dict()
-        dict_for_result['rank'] = rank_of_result
-        dict_for_result['title'] = book_title
-        dict_for_result['author'] = final_author_list
-        dict_for_result['worldcaturl'] = new_url
-        dict_for_result['coverurl'] = final_cover_url
-
-        # append the dict for the specific result to the final list of dicts
-        list_of_search_results.append(dict_for_result)
-
-    return list_of_search_results
+    return oclc_id_results_list
 
 
-def get_item_details(dict_of_item):
-    """Provided one item's dictionary results from search_for_books(keywords),
-    returns full book details for database for that item by the worldcat URL of its items details page."""
+def create_book_from_worldcat_id(oclc_id):
+    """
+    :param oclc_id:
+    :return:
+    """
+    worldcat_url_with_oclc_id = "http://www.worldcat.org/oclc/" + oclc_id
+    details_page = requests.get(worldcat_url_with_oclc_id)
+    html_string = details_page.content
 
-    # return list of only ISBN-13's for each url:
-    # [ { '[url]': [#, #, #, ...] },
-    #   ...
-    # ]
-    # >>> page = requests.get("http://www.worldcat.org/title/lean-in-women-work-and-the-will-to-lead/oclc/813526963&referer=brief_results")
-    # >>> pq_details_page = pq(page.content)
-    # ISBN
-    # >>> isbn = pq_details_page('#details-standardno').eq(0).text()
-    # >>> isbn
-    # 'ISBN: 9780385349949 0385349947'
-    # TITLE
-    # >>> pq_details_page('h1.title').text()
-    # 'Lean in : women, work, and the will to lead'
-    # AUTHOR
-    # >>> authors_string = pq_details_page('#bib-author-cell').text()
-    # >>> [x.strip() for x in authors_string.split(';')]
-    # ['Sheryl Sandberg', 'Nell Scovell']
-    # COVER URL
-    # http://covers.openlibrary.org/b/isbn/9780385533225-S.jpg
-    # PUBLISHER
-    # NUMBER OF PAGES
-    # SUMMARY
+    return _create_book_from_worldcat_details(html_string, worldcat_url_with_oclc_id, oclc_id)
 
-    isbn_10_key = 'ISBN-10'
-    isbn10_list = []
-    isbn_13_key = 'ISBN-13'
-    isbn13_list = []
+def _create_book_from_worldcat_details(html_string, worldcat_url_with_oclc_id, oclc_id):
 
-    # initialize the empty dicts for this specific result
-    book_details_dict = {}
+    book = _load_book_from_worldcat_details_page(html_string, worldcat_url_with_oclc_id, oclc_id)
+    # author_list = _load_authors_from_worldcat_details_page(html_string)
+    # isbn10_list, isbn13_list = _load_isbns_from_worldcat_details_page(html_string)
+    #
+    # goodreads_info_list = [get_goodreads_info_by_isbn13(current_isbn13.isbn13) for current_isbn13 in isbn13_list]
 
-    # get the url string from the dictionary passed into this function
-    url = dict_of_item['worldcaturl']
+    # final_dict = {
+    #     'book': book,
+    #     'authors': author_list,
+    #     'isbn10s': isbn10_list,
+    #     'isbn13s': isbn13_list,
+    #     'goodreadsinfo': goodreads_info_list,
+    # }
+    #
+    # return final_dict
+    for current_isbn13 in book.isbn13s:
+        current_isbn13.goodreadsinfo = get_goodreads_info_by_isbn13(current_isbn13.isbn13)
 
-    # requests.get the contents of the page and convert to pq object
-    page = requests.get(url)
+    return book
 
-    # TODO - create a function that takes a string (page.content), this will make it easier to write a test
-    pq_page = pq(page.content)
 
-    # TITLE
-    # >>> pq_details_page('h1.title').text()
-    # 'Lean in : women, work, and the will to lead'
-    title = pq_page('h1.title').text()
+def _load_book_from_worldcat_details_page(html_content, details_page_url, oclc_id):
+    """Given the HTML content of the details page, create a new Book object with all the necessary details."""
 
-    # AUTHOR
-    # >>> authors_string = pq_details_page('#bib-author-cell').text()
-    # >>> [x.strip() for x in authors_string.split(';')]
-    # ['Sheryl Sandberg', 'Nell Scovell']
-    authors_string = pq_page('#bib-author-cell').text()
-    author_list = [author.strip() for author in authors_string.split(';')]
+    current_book = Book()
+    pq_page = pq(html_content)
+    oclc_id_as_int = int(oclc_id)
 
-    # PUBLISHER
-    # >>> publisher = pq_details_page('#bib-publisher-cell').text()
-    # 'New York : Alfred A. Knopf, 2013.' (pub_loc : pub, pub_year)
-    publisher = pq_page('#bib-publisher-cell').text()
+    current_book.book_id = oclc_id_as_int
+    current_book.title = _load_title_from_worldcat_details_page(pq_page)  # TITLE (e.g. 'Lean in : women, work, and the will to lead')
+    current_book.publisher = _load_publisher_from_worldcat_details_page(pq_page)  # PUBLISHER (e.g. 'New York : Alfred A. Knopf, 2013.')
+    current_book.worldcaturl = details_page_url
+    current_book.page_count = _load_page_count_from_worldcat_details_page(pq_page)
+    current_book.summary = _load_summary_from_worldcat_details_page(pq_page)
+    current_book.coverurl = _load_cover_url_from_worldcat_details_page(pq_page)
 
-    # FORMAT
-    format = pq_page('span.itemType').text()
+    # TODO - special
+    current_book.authors = _load_authors_from_worldcat_details_page(html_content)
 
-    # NUMBER OF PAGES
-    # >>> desc = pq_details_page('#details-description td').text()
-    # "228 pages; 1 edition"
-    # >>> page_num = []
-    # >>> for char in desc[desc.find('pages')-1::-1]:
-    # ...     if char != " " and not char.isdigit():
-    # ...         break
-    # ...     elif char == " " or char.isdigit():
-    # ...         page_num.insert(0, char)
-    # ...
-    # ...
-    # ...
-    # >>> page_num
-    # ['2', '2', '8', ' ']
-    desc = pq_page('#details-description td').text()
-    page_num = []
+    isbn10_list, isbn13_list = _load_isbns_from_worldcat_details_page(html_content)
+    current_book.isbn10s = isbn10_list
+    current_book.isbn13s = isbn13_list
+
+    return current_book
+
+
+def _load_title_from_worldcat_details_page(pq_html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    return pq_html_content('h1.title').text()
+
+
+def _load_publisher_from_worldcat_details_page(pq_html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    return pq_html_content('#bib-publisher-cell').text()
+
+
+def _load_page_count_from_worldcat_details_page(pq_html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    description_string = pq_html_content('#details-description td').text()
+    page_num_list = []
 
     # TODO - find more pages examples from worldcat and make sure we can cover more page formats
-    for char in desc[desc.find('pages')-2::-1]:
-        if not char.isdigit():
+    digits_found = False
+    for char in description_string[description_string.find('pages')::-1]:
+        if char.isdigit():
+            digits_found = True
+            page_num_list.insert(0, char)
+        elif not char.isdigit() and digits_found:
             break
         else:
-            page_num.insert(0, char)
+            continue
 
-    num_of_pages = "".join(page_num)
+    num_of_pages = "".join(page_num_list)
 
-    # SUMMARY
-    # >>> summary = pq_details_page('div.abstracttxt').text()
-    summary = pq_page('div.abstracttxt').text()
+    return num_of_pages
 
-    # find the isbns on the page by their css selector and format them as a list
+
+def _load_summary_from_worldcat_details_page(pq_html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    return pq_html_content('div.abstracttxt').text()
+
+
+def _load_cover_url_from_worldcat_details_page(pq_html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    cover_url = pq_html_content('div#cover img.cover').attr('src')
+    final_cover_url = HTTP_URL + cover_url
+
+    return final_cover_url
+
+
+def _load_authors_from_worldcat_details_page(html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    pq_page = pq(html_content)
+    authors_string = pq_page('#bib-author-cell').text()
+    author_list = [author.strip() for author in authors_string.split(';')]
+    final_author_list = []
+    for author in author_list:
+        current_author = Author()
+        current_author.author_id = None
+        current_author.author_name = author.strip()
+        final_author_list.append(current_author)
+
+    return final_author_list
+
+
+def _load_isbns_from_worldcat_details_page(html_content):
+    """
+    :param pq_html_content:
+    :return:
+    """
+
+    pq_page = pq(html_content)
     isbn_string = pq_page('#details-standardno').eq(0).text()
     isbn_list = isbn_string.split(" ")
+    isbn10_list = []
+    isbn13_list = []
+    for current_isbn in isbn_list:
+        if len(current_isbn) == 10:
+            isbn10_obj = ISBN10()
+            isbn10_obj.isbn10 = current_isbn
+            isbn10_list.append(isbn10_obj)
+        elif len(current_isbn) == 13:
+            isbn13_obj = ISBN13()
+            isbn13_obj.isbn13 = current_isbn
+            isbn13_list.append(isbn13_obj)
 
-    # for any list item that is an ISBN of a particular length, assign the appropriate key and value
-    for item in isbn_list:
-        # TODO if item == ISBN:  continue
-        if item != "ISBN:" and len(item) == 10:
-            isbn10_list.append(str(item))
-        elif item != "ISBN:" and len(item) == 13:
-            isbn13_list.append(str(item))
-
-    # TODO - consider promoting these to model.ISBN10 and model.ISBN13
-    book_details_dict[isbn_10_key] = isbn10_list
-    book_details_dict[isbn_13_key] = isbn13_list
-
-    coverurl = dict_of_item['coverurl']
-
-    # GOODREADS INFO
-    # TODO - pull goodreads info out of this function so we can create model.GoodreadsInfo
-    isbn_to_goodreads_list = [get_goodreads_info_by_isbn13(isbn13) for isbn13 in isbn13_list]
-
-    # TODO - Simplify k.values()[0] issue and sorted[0].keys()[0]
-    # sortedlist = list(sorted(isbn_to_goodreads_list, key=lambda k: int(k.values()[0]['goodreads_ratings_count'])))
-    # lead_isbn13_by_ratings_count = sortedlist[0].keys()[0]
-
-    # assign the type_of_isbn-isbn_no key-value pairs to the corresponding url's dictionary
-    # TODO - consider promoting book_details_dict to model.Book
-    book_details_dict['worldcaturl'] = url
-    book_details_dict['title'] = title
-    book_details_dict['author'] = author_list
-    book_details_dict['publisher'] = publisher
-    book_details_dict['page_count'] = num_of_pages
-    book_details_dict['coverurl'] = coverurl
-    book_details_dict['format'] = format
-    book_details_dict['summary'] = summary
-    book_details_dict['isbn_to_goodreads_list'] = isbn_to_goodreads_list
-    # book_details_dict['isbn13_lead_by_goodreads_ratings_count'] = lead_isbn13_by_ratings_count
-
-    return book_details_dict
+    return [isbn10_list, isbn13_list]
 
 
 def get_goodreads_info_by_isbn13(isbn13):
@@ -233,18 +221,33 @@ def get_goodreads_info_by_isbn13(isbn13):
     payload = dict(key=goodreads_key, isbn=isbn13)
 
     goodreads_page = requests.get(url, params=payload)
-    pq_goodreads_page = pq(goodreads_page.content)
+
+    html_string = goodreads_page.content
+
+    goodreads_info_obj = _load_goodreads_info_from_goodreads_api(html_string)
+
+    return goodreads_info_obj
+
+
+def _load_goodreads_info_from_goodreads_api(html_content):
+    """
+    :param html_content:
+    :return:
+    """
+
+    # TODO - promote this part to a separate function so we can write tests again test_html
+    pq_goodreads_page = pq(html_content)
 
     pq_book = pq_goodreads_page('book').eq(0)
 
     pq_work = pq_goodreads_page('book').eq(0)('work').eq(0)
 
-    final_dict = {}
-    final_dict['goodreads_work_id'] = pq_work('id').text()
-    final_dict['goodreads_rating'] = float(pq_book.children('average_rating').text() or 0.0)
-    final_dict['goodreads_ratings_count'] = int(pq_work('ratings_count').text() or 0)
-    final_dict['goodreads_review_count'] = int(pq_work('reviews_count').text() or 0)
+    # TODO - Return GoodreadsInfo()
+    goodreads_info = GoodreadsInfo()
+    goodreads_info.goodreads_work_id = pq_work('id').text()
+    goodreads_info.goodreads_rating = float(pq_book.children('average_rating').text() or 0.0)
+    goodreads_info.goodreads_ratings_count = int(pq_work('ratings_count').text() or 0)
+    goodreads_info.goodreads_review_count = int(pq_work('reviews_count').text() or 0)
+    goodreads_info.goodreads_review_text = None
 
-    final_dict['isbn13'] = isbn13
-
-    return final_dict
+    return goodreads_info

@@ -7,28 +7,28 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover">
-      {% for dict_item in list %}
+      {% for current_book in list %}
 
-        <tr id="{{ dict_item.get('rank') }}">
+        <tr id="{{ current_book.book_id }}">
           <td class="col-xs-12 col-sm-2">
-            <img src="{{ dict_item.get('coverurl') }}" class="img-responsive" alt="cover for {{ dict_item.get('title') }}">
+            <img src="{{ current_book.coverurl }}" class="img-responsive" alt="cover for {{ current_book.title }}">
           </td>
           <td class="col-xs-12 col-sm-4">
-            <a href="/details/{{ dict_item.get('bookid') }}"><div class="row title">
-                {{ dict_item.get('title') }}
+            <a href="/details/{{ current_book.book_id }}"><div class="row title">
+                {{ current_book.title }}
             </div></a>
             <div class="row author">
-                {{ dict_item.get('author')|join(', ') }}
+                {% for current_author in current_book.authors %}
+                {{ current_author.author_name }}
+                {% endfor %}
             </div>
             <div class="row publisher">
-                {{ dict_item.get('publisher') }}
+                {{ current_book.publisher }}
             </div>
-            <div class="row format">
-                {{ dict_item.get('format') }}
-            </div>
-            {% if dict_item.get('page_count') %}
+
+            {% if current_book.page_count %}
             <div class="row pagecount">
-                {{ dict_item.get('page_count') }} pages
+                {{ current_book.page_count }} pages
             </div>
             {% endif %}
           </td>

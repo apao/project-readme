@@ -1,5 +1,6 @@
 """Models and database functions for project readme."""
 
+from sqlalchemy.ext.associationproxy import association_proxy
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -46,14 +47,21 @@ class Book(db.Model):
 
     __tablename__ = "books"
 
-    book_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    book_id = db.Column(db.Integer, primary_key=True)
     worldcaturl = db.Column(db.String(500), nullable=False)
     title = db.Column(db.String(500), nullable=False)
     publisher = db.Column(db.String(500), nullable=False)
     page_count = db.Column(db.String(10), nullable=True)
     summary = db.Column(db.String(10000), nullable=True)
     coverurl = db.Column(db.String(500), nullable=False)
-   
+
+    # NOTE - Magical SQLAlchemy incantation for association proxies
+    # http://docs.sqlalchemy.org/en/latest/orm/extensions/associationproxy.html
+
+    authors = association_proxy('book_authors', 'author',
+        creator=lambda author: BookAuthors(author=author)
+    )
+
     def __repr__(self):
         """Represents book object"""
         return "<Book ID: %s, Title: %s>" % (self.book_id, self.title)
@@ -88,7 +96,7 @@ class ISBN13(db.Model):
     isbn13 = db.Column(db.String(20), nullable=False)
     lead_isbn13_by_gr_ratings_count = db.Column(db.Boolean, nullable=True, default=False)
 
-    book = db.relationship('Book', backref=db.backref('isbn13s', order_by=isbn13_id))
+    book = db.relationship('Book', backref=db.backref('isbn13s'))
 
 
 class Author(db.Model):
@@ -97,7 +105,7 @@ class Author(db.Model):
     __tablename__ = "authors"
 
     author_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    author_name = db.Column(db.String(50), nullable=False)
+    author_name = db.Column(db.String(50), nullable=False) #, unique=True)
 
 
 class BookAuthors(db.Model):
@@ -109,30 +117,11 @@ class BookAuthors(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('authors.author_id'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
 
-    author = db.relationship('Author', backref=db.backref('books', order_by=book_id))
-    book = db.relationship('Book', backref=db.backref('authors', order_by=book_id)) 
+    book = db.relationship('Book',
+        backref=db.backref("book_authors", cascade="all, delete-orphan")
+    )
 
-
-class Format(db.Model):
-    """Format for item on website."""
-
-    __tablename__ = "formats"
-
-    format_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    format_type = db.Column(db.String(50), nullable=False)
-
-
-class BookFormat(db.Model):
-    """Association table for books and formats on website."""
-
-    __tablename__ = "bookformats"
-
-    bookformat_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    format_id = db.Column(db.Integer, db.ForeignKey('formats.format_id'), nullable=False)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
-
-    format = db.relationship('Format', backref=db.backref('books', order_by=format_id))
-    book = db.relationship('Book', backref=db.backref('bookformats', order_by=book_id)) 
+    author = db.relationship('Author', backref=db.backref('books'))
 
 
 class AmazonInfo(db.Model):
@@ -163,8 +152,7 @@ class GoodreadsInfo(db.Model):
     goodreads_review_count = db.Column(db.Integer, nullable=True)
     goodreads_review_text = db.Column(db.String(10000), nullable=True)
 
-    isbn13 = db.relationship('ISBN13', backref=db.backref('goodreadsinfo', order_by=goodreadsinfo_id))
-
+    isbn13 = db.relationship('ISBN13', backref=db.backref('goodreadsinfo', uselist=False))
 
 class LibrarySystem(db.Model):
     """Library system on website."""
@@ -216,183 +204,6 @@ class BookGenre(db.Model):
     book = db.relationship('Book', backref=db.backref('genres', order_by=genre_id))
 
 
-class Query(db.Model):
-    """User query on website."""
-
-    __tablename__ = "queries"
-
-    query_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    query_keywords = db.Column(db.String(100), nullable=False)
-    last_updated = db.Column(db.DateTime, nullable=False)
-
-    @classmethod
-    def get_query_id_by_keywords(cls, keywords):
-
-        query_id = Query.query.filter_by(query_keywords=keywords).first().query_id
-
-        return query_id
-
-
-class QueryBook(db.Model):
-    """Association table for query and book on website."""
-
-    __tablename__ = "querybooks"
-
-    querybook_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    query_id = db.Column(db.Integer, db.ForeignKey('queries.query_id'), nullable=False)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.book_id'), nullable=False)
-    rank_of_result = db.Column(db.Integer, nullable=False)
-
-    book = db.relationship('Book', backref=db.backref('queries', order_by=querybook_id))
-
-    @classmethod
-    def get_results_by_query_id(cls, query_id):
-
-        results = QueryBook.query.filter_by(query_id=query_id).all()
-
-        return results
-
-
-def add_new_query(keywords):
-    """Given search keywords, add a new query to the db."""
-
-    current_time = datetime.utcnow()
-    new_query = Query(query_keywords=keywords, last_updated=current_time)
-    db.session.add(new_query)
-    db.session.commit()
-
-    return new_query.query_id
-
-
-def add_new_book(queryid, newdict, rank):
-    """Given a dict about a book, add the book details to the db."""
-
-    # TODO - push model.Book creation upstream
-    new_book = Book(
-                    worldcaturl=newdict['worldcaturl'],
-                    title=newdict['title'],
-                    publisher=newdict['publisher'],
-                    page_count=newdict['page_count'],
-                    coverurl=newdict['coverurl'],
-                    summary=newdict['summary']
-                   )
-
-    db.session.add(new_book)
-    db.session.flush()
-
-    # AUTHOR(S)
-    author_list = newdict['author']
-
-    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
-    # TODO - so you can do Book.authors = [Author(), Author()]
-    # TODO - work on caching behavior
-    for author in author_list:
-        # CONSIDER ADDING CONDITIONAL TO MAKE SURE AUTHORS DO NOT REPEAT IN THE AUTHOR TABLE
-        # Adds an author to the author table
-        new_author = Author(author_name=author)
-        db.session.add(new_author)
-        db.session.flush()
-        # Correlates each author to the book in the BookAuthors table
-        new_book_author = BookAuthors(book_id=new_book.book_id, author_id=new_author.author_id)
-        db.session.add(new_book_author)
-        db.session.flush()
-
-    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
-    # ISBN-10's
-    isbn10_list = newdict['ISBN-10']
-
-    for isbn in isbn10_list:
-        new_isbn10 = ISBN10(book_id=new_book.book_id, isbn10=isbn)
-        db.session.add(new_isbn10)
-        db.session.flush()
-
-    # ISBN-13's
-    isbn13_list = newdict['ISBN-13']
-
-    for isbn in isbn13_list:
-        new_isbn13 = ISBN13(book_id=new_book.book_id, isbn13=isbn)
-        db.session.add(new_isbn13)
-        db.session.flush()
-
-    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
-    # GOODREADS INFO
-    isbn_to_goodreads_list = newdict['isbn_to_goodreads_list']
-
-    for goodreads_map in isbn_to_goodreads_list:
-        isbn13 = goodreads_map['isbn13']
-
-        isbn13_id_for_item = ISBN13.query.filter_by(isbn13=isbn13).first().isbn13_id
-        new_goodreadsinfo = GoodreadsInfo(isbn13_id=isbn13_id_for_item,
-                                          goodreads_work_id=goodreads_map['goodreads_work_id'],
-                                          goodreads_rating=goodreads_map['goodreads_rating'],
-                                          goodreads_ratings_count=goodreads_map['goodreads_ratings_count'],
-                                          goodreads_review_count=goodreads_map['goodreads_review_count'])
-        db.session.add(new_goodreadsinfo)
-        db.session.flush()
-
-    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
-    # FORMAT & BOOKFORMAT
-    format = newdict['format']
-    new_format = Format(format_type=format)
-    db.session.add(new_format)
-    db.session.flush()
-
-    new_book_format = BookFormat(book_id=new_book.book_id, format_id=new_format.format_id)
-    db.session.add(new_book_format)
-    db.session.flush()
-
-    # TODO - consider letting SQLAlchemy handle this by setting up Relationships
-    # QUERY & QUERYBOOK
-    new_query_book = QueryBook(query_id=queryid, book_id=new_book.book_id, rank_of_result=rank)
-    db.session.add(new_query_book)
-    db.session.flush()
-
-    db.session.commit()
-
-    print "New book added!"
-
-    return new_book.book_id
-
-
-def get_db_results(queryid):
-    """Return a list of dictionary results from the database by searching for queryid."""
-
-    db_results_list = []
-    querybook_list = QueryBook.query.filter_by(query_id=queryid).order_by("book_id").all()
-
-    for querybook in querybook_list:
-
-        result_dict = {}
-        current_book = querybook.book
-
-        result_dict['bookid'] = current_book.book_id
-        result_dict['worldcaturl'] = current_book.worldcaturl
-        result_dict['title'] = current_book.title
-        result_dict['publisher'] = current_book.publisher
-        result_dict['page_count'] = current_book.page_count
-        result_dict['coverurl'] = current_book.coverurl
-        result_dict['summary'] = current_book.summary
-        result_dict['format'] = current_book.bookformats[0].format.format_type
-
-        # CONSIDER USING SQLALCHEMY RELATIONSHIP LOADING
-        # http://docs.sqlalchemy.org/en/latest/orm/loading_relationships.html
-        # author_list = BookAuthors.query.filter_by(book_id=bookid).all()
-        author_list_for_dict = [a.author.author_name for a in current_book.authors]
-        result_dict['author'] = author_list_for_dict
-
-        # isbn10_list = ISBN10.query.filter_by(book_id=bookid).all()
-        isbn10_list_for_dict = [num.isbn10 for num in current_book.isbn10s]
-        result_dict['ISBN-10'] = isbn10_list_for_dict
-
-        # isbn13_list = ISBN13.query.filter_by(book_id=bookid).all()
-        isbn13_list_for_dict = [num.isbn13 for num in current_book.isbn13s]
-        result_dict['ISBN-13'] = isbn13_list_for_dict
-
-        db_results_list.append(result_dict)
-
-    return db_results_list
-
-
 def get_db_book_details(bookid):
     """Return a dictionary for a book from the database by searching for bookid."""
     current_book = Book.get_book_by_id(bookid)
@@ -406,12 +217,12 @@ def get_db_book_details(bookid):
     result_dict['page_count'] = current_book.page_count
     result_dict['coverurl'] = current_book.coverurl
     result_dict['summary'] = current_book.summary
-    result_dict['format'] = current_book.bookformats[0].format.format_type
+    # result_dict['format'] = current_book.bookformats[0].format.format_type
 
     # CONSIDER USING SQLALCHEMY RELATIONSHIP LOADING
     # http://docs.sqlalchemy.org/en/latest/orm/loading_relationships.html
     # author_list = BookAuthors.query.filter_by(book_id=bookid).all()
-    author_list_for_dict = [a.author.author_name for a in current_book.authors]
+    author_list_for_dict = [a.author_name for a in current_book.authors]
     result_dict['author'] = author_list_for_dict
 
     # isbn10_list = ISBN10.query.filter_by(book_id=bookid).all()

@@ -1,14 +1,14 @@
 """Project ReadMe."""
-
+import requests
 from jinja2 import StrictUndefined
 
 from flask import Flask, render_template, request
 from flask_debugtoolbar import DebugToolbarExtension
 
-from model import Query, connect_to_db, LibraryBranch
-from model import get_db_results, add_new_book, add_new_query, get_db_book_details
+from model import db, connect_to_db, LibraryBranch
+from model import get_db_book_details
 
-from book_loader import get_crawl_results, get_item_details
+from book_loader import get_crawl_results, create_book_from_worldcat_id
 from availability_search import SCCLAvailabilitySearch, SMCLAvailabilitySearch, SFPLAvailabilitySearch, normalize_sccl_availability, normalize_smcl_availability, normalize_sfpl_availability
 
 """
@@ -131,37 +131,24 @@ def search_page():
 
 @app.route('/results', methods=['POST'])
 def get_search_results():
-    """Get, store and render results based on user keyword search."""
-
     search_keywords = request.form.get("keywords")
     search_keywords = search_keywords.strip().lower()
 
-    matching_query = Query.query.filter_by(query_keywords=search_keywords).first()
+    oclc_id_results_list = get_crawl_results(search_keywords)
 
-    if matching_query:
-        print "Matching query found!"
-        final_results = get_db_results(matching_query.query_id)
-    else:
-        initial_results = get_crawl_results(search_keywords)
-        new_query_id = add_new_query(search_keywords)
-        print "New query added!"
+    # TODO - Add caching code as proposed by mentor
+    # [] = book_loader.load_books_by_oclc_ids(oclc_id_results_list)
+    all_books = []
+    for oclc_id in oclc_id_results_list:
+        current_book = create_book_from_worldcat_id(oclc_id)
+        all_books.append(current_book)
+        db.session.add(current_book)
+        db.session.flush()
 
-        final_results = []
+        print '%s - %s' % (oclc_id, current_book.title)
 
-        # TODO - document what initial results are, they are a list of parsed worldcat search results
-        for item in initial_results:
-
-            new_dict = get_item_details(item)
-            rank = item['rank']
-            new_dict['rank'] = rank
-
-            # TODO - if get_item_details returns a bunch of model.Book/model.ISBN*/model.GoodreadsInfo
-            # TODO - update add_new_book
-            new_book_id = add_new_book(new_query_id, new_dict, rank)
-            new_dict['bookid'] = new_book_id
-            final_results.append(new_dict)
-
-    return render_template("searchresults.html", list=final_results)
+    db.session.commit()
+    return render_template("searchresults.html", list=all_books)
 
 
 @app.route('/details/<int:bookid>')
@@ -277,6 +264,9 @@ if __name__ == "__main__":
     # We have to set debug=True here, since it has to be True at the point
     # that we invoke the DebugToolbarExtension
     app.debug = True
+
+    # http://stackoverflow.com/questions/12369295/flask-sqlalchemy-display-queries-for-debug
+    app.config['SQLALCHEMY_ECHO'] = True
 
     connect_to_db(app)
 
