@@ -2,7 +2,6 @@
 
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 
 # This is the connection to the PostgreSQL database; we're getting this through
 # the Flask-SQLAlchemy helper library. On this, we can find the `session`
@@ -204,44 +203,32 @@ class BookGenre(db.Model):
     book = db.relationship('Book', backref=db.backref('genres', order_by=genre_id))
 
 
-def get_db_book_details(bookid):
-    """Return a dictionary for a book from the database by searching for bookid."""
+def get_book_related_details(bookid):
+    """
+    :param bookid:
+    :return:
+    """
+
     current_book = Book.get_book_by_id(bookid)
-
-    result_dict = {}
-
-    result_dict['bookid'] = current_book.book_id
-    result_dict['worldcaturl'] = current_book.worldcaturl
-    result_dict['title'] = current_book.title
-    result_dict['publisher'] = current_book.publisher
-    result_dict['page_count'] = current_book.page_count
-    result_dict['coverurl'] = current_book.coverurl
-    result_dict['summary'] = current_book.summary
-    # result_dict['format'] = current_book.bookformats[0].format.format_type
-
-    # CONSIDER USING SQLALCHEMY RELATIONSHIP LOADING
     # http://docs.sqlalchemy.org/en/latest/orm/loading_relationships.html
-    # author_list = BookAuthors.query.filter_by(book_id=bookid).all()
-    author_list_for_dict = [a.author_name for a in current_book.authors]
-    result_dict['author'] = author_list_for_dict
-
-    # isbn10_list = ISBN10.query.filter_by(book_id=bookid).all()
-    isbn10_list_for_dict = [num.isbn10 for num in current_book.isbn10s]
-    result_dict['ISBN-10'] = isbn10_list_for_dict
-
-    # isbn13_list = ISBN13.query.filter_by(book_id=bookid).all()
-    isbn13_list_for_dict = [num.isbn13 for num in current_book.isbn13s]
-    result_dict['ISBN-13'] = isbn13_list_for_dict
-
+    author_list = current_book.authors
+    isbn10_list = current_book.isbn10s
+    isbn13_list = current_book.isbn13s
     isbn13_id_list = [num.isbn13_id for num in current_book.isbn13s]
-
     goodreadsinfo_matches = GoodreadsInfo.query.filter(GoodreadsInfo.isbn13_id.in_(isbn13_id_list)).all()
     sorted_goodreadsinfo = list(sorted(goodreadsinfo_matches, key=lambda k: int(k.goodreads_ratings_count)))
     if sorted_goodreadsinfo:
         leading_goodreadsinfo_match = sorted_goodreadsinfo[0]
     else:
         leading_goodreadsinfo_match = []
-    result_dict['goodreads_info'] = leading_goodreadsinfo_match
+
+    result_dict = {
+        'book': current_book,
+        'authors': author_list,
+        'isbn10s': isbn10_list,
+        'isbn13s': isbn13_list,
+        'goodreads_info': leading_goodreadsinfo_match
+    }
 
     return result_dict
 

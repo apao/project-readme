@@ -14,26 +14,26 @@
 
 <div class="col-xs-12 row col-sm-10 col-sm-offset-1">
   <div class="panel panel-default">
-    <div class="panel-heading title" id="{{ dictionary.get('bookid') }}">
-      <h1 class="panel-title">{{ dictionary.title|title }}</h1>
-      by {{ dictionary.get('author')|join(', ') }}
+    <div class="panel-heading title" id="{{ book.book_id }}">
+      <h1 class="panel-title">{{ book.title|title }}</h1>
+      by {% for current_author in authors %}
+            {{ current_author.author_name }}
+            {% if not loop.last %}, {% endif %}
+        {% endfor %}
     </div>
     <div class="panel-body">
       <div class="row details">
       <!-- BEGIN LEFT COLUMN -->
       <div class="col-md-3">
         <div class="row coverimg">
-          <img src="{{ dictionary.get('coverurl') }}" class="img-responsive" alt="cover for {{ dictionary.get('title') }}">
+          <img src="{{ book.coverurl }}" class="img-responsive" alt="cover for {{ book.title }}">
         </div>
         <div class="row publisher">
-            {{ dictionary.get('publisher') }}
+            {{ book.publisher }}
         </div>
-        <div class="row format">
-            {{ dictionary.get('format') }}
-        </div>
-        {% if dictionary.get('page_count') %}
+        {% if book.page_count %}
         <div class="row pagecount">
-            {{ dictionary.get('page_count') }} pages
+            {{ book.page_count }} pages
         </div>
         {% endif %}
       </div>
@@ -43,16 +43,16 @@
       <div class="col-md-9">
         <div class="row goodreadsinfo">
           <h3>Ratings Information from <a href="http://www.goodreads.com/"><img src="../static/goodreads_misc_logo.jpg" width="20%"/></a></h3>
-          {% if dictionary.goodreads_info %}
-          <strong>Average Rating:</strong> {{ dictionary.get('goodreads_info').goodreads_rating }} | {{ dictionary.get('goodreads_info').goodreads_ratings_count }} ratings
-          <br><strong>ISBN:</strong> {{ dictionary.get('goodreads_info').isbn13.isbn13 }}
+          {% if goodreads_info %}
+          <strong>Average Rating:</strong> {{ goodreads_info.goodreads_rating }} | {{ goodreads_info.goodreads_ratings_count }} ratings
+          <br><strong>ISBN:</strong> {{ goodreads_info.isbn13.isbn13 }}
           {% else %}
           <p>No ratings information available.</p>
           {% endif %}
         </div>
         <div class="row summary">
             <h3>Summary</h3>
-            {{ dictionary.get('summary') }}
+            {{ book.summary }}
         </div>
         <div class="row availability">
           <h3>Library Availability <button type="button" id="geolocate" class="btn btn-primary btn-lg">Find Me on the Map!</button></h3>
@@ -106,8 +106,8 @@
   var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v8',
-    center: [-74.2588894, 40.70583],
-    zoom: 10
+    center: [-122.2053906, 37.4257657],
+    zoom: 8
   });
 
   map.on('style.load', function () {

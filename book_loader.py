@@ -10,9 +10,46 @@ WORLDCAT_FILTER_LANG_EN_EBOOKS_ONLY = "&fq=%20(%28x0%3Abook+x4%3Adigital%29)%20>
 
 HTTP_URL = "http:"
 
+def get_crawl_results_with_cache_check(keywords):
+    """
+    :param keywords:
+    :return:
+    """
+    final_dict = dict()
+    # list_of_oclc_ids_as_strings, list_of_oclc_ids_as_ints = get_crawl_results(keywords)
+    list_of_oclc_ids = get_crawl_results(keywords)
+
+    books_in_db = Book.query.filter(Book.book_id.in_(list_of_oclc_ids)).all()
+
+    for current_book_in_db in books_in_db:
+        final_dict[current_book_in_db.book_id] = current_book_in_db
+
+    for current_id in list_of_oclc_ids:
+        # check to see if current_id is in db already
+        if current_id in final_dict:
+            continue
+
+        # create a new book
+        current_book = create_book_from_worldcat_id(current_id)
+        # add new book to db
+        db.session.add(current_book)
+        db.session.flush()
+        # add new book to final_dict
+        final_dict[current_id] = current_book
+        print '%s - %s' % (current_id, current_book.title)
+
+    db.session.commit()
+
+    # Iterate through list of final_dict
+    all_books = [final_dict[current_id] for current_id in list_of_oclc_ids]
+
+    return all_books
+
+
 def get_crawl_results(keywords):
     """Provided user's search keywords, return list of search results, represented by
-    a dictionary of general info and WorldCat url for each result."""
+    a list of OCLC IDs (also our own book IDs)."""
+
     # TODO - consider renaming function to worldcat_ids_from_search_results_page
     # take a user's search keywords
     # convert string to match the format for the WorldCat search results page
@@ -24,11 +61,11 @@ def get_crawl_results(keywords):
     # requests.get the search results page and
     results_page_xml = requests.get(worldcat_ready_url)
 
-    list_of_search_results = search_for_print_books(results_page_xml.content)
+    list_of_oclc_ids = search_for_print_books(results_page_xml.content)
 
-    return list_of_search_results
+    return list_of_oclc_ids
 
-# TODO - change this function so this returns ONLY a list of oclc_ids IN ORDER, we do not care about the rank, Book objects, or others
+
 def search_for_print_books(xml_content):
     """Given the url for a WorldCat search results page of English-language print books,
     returns a dictionary about the first 10 search results."""
@@ -36,45 +73,33 @@ def search_for_print_books(xml_content):
     # use pyquery to query the results_page_xml
     pq_results_page_xml = pq(xml_content)
 
-    # TODO - add documentation why we use .eq(3)
     # For each WorldCat search results page, there are four sets of content tags.
     # For our purposes, we only care about the HTML text within the last set of content tags.
     content_xml = pq_results_page_xml('content').eq(3).text()
     pq_content = pq(content_xml)
 
-    oclc_id_results_list = [i.text() for i in pq_content('div.oclc_number').items()]
+    # oclc_id_as_strings_results_list = [i.text() for i in pq_content('div.oclc_number').items()]
+    oclc_id_as_ints_results_list = [int(i.text()) for i in pq_content('div.oclc_number').items()]
 
-    return oclc_id_results_list
-
+    # return (oclc_id_as_strings_results_list, oclc_id_as_ints_results_list)
+    return oclc_id_as_ints_results_list
 
 def create_book_from_worldcat_id(oclc_id):
     """
     :param oclc_id:
     :return:
     """
-    worldcat_url_with_oclc_id = "http://www.worldcat.org/oclc/" + oclc_id
+    worldcat_url_with_oclc_id = "http://www.worldcat.org/oclc/%d" % oclc_id
     details_page = requests.get(worldcat_url_with_oclc_id)
     html_string = details_page.content
 
     return _create_book_from_worldcat_details(html_string, worldcat_url_with_oclc_id, oclc_id)
 
+
 def _create_book_from_worldcat_details(html_string, worldcat_url_with_oclc_id, oclc_id):
 
     book = _load_book_from_worldcat_details_page(html_string, worldcat_url_with_oclc_id, oclc_id)
-    # author_list = _load_authors_from_worldcat_details_page(html_string)
-    # isbn10_list, isbn13_list = _load_isbns_from_worldcat_details_page(html_string)
-    #
-    # goodreads_info_list = [get_goodreads_info_by_isbn13(current_isbn13.isbn13) for current_isbn13 in isbn13_list]
 
-    # final_dict = {
-    #     'book': book,
-    #     'authors': author_list,
-    #     'isbn10s': isbn10_list,
-    #     'isbn13s': isbn13_list,
-    #     'goodreadsinfo': goodreads_info_list,
-    # }
-    #
-    # return final_dict
     for current_isbn13 in book.isbn13s:
         current_isbn13.goodreadsinfo = get_goodreads_info_by_isbn13(current_isbn13.isbn13)
 
@@ -86,9 +111,9 @@ def _load_book_from_worldcat_details_page(html_content, details_page_url, oclc_i
 
     current_book = Book()
     pq_page = pq(html_content)
-    oclc_id_as_int = int(oclc_id)
 
-    current_book.book_id = oclc_id_as_int
+    current_book.book_id = oclc_id
+
     current_book.title = _load_title_from_worldcat_details_page(pq_page)  # TITLE (e.g. 'Lean in : women, work, and the will to lead')
     current_book.publisher = _load_publisher_from_worldcat_details_page(pq_page)  # PUBLISHER (e.g. 'New York : Alfred A. Knopf, 2013.')
     current_book.worldcaturl = details_page_url
@@ -96,7 +121,7 @@ def _load_book_from_worldcat_details_page(html_content, details_page_url, oclc_i
     current_book.summary = _load_summary_from_worldcat_details_page(pq_page)
     current_book.coverurl = _load_cover_url_from_worldcat_details_page(pq_page)
 
-    # TODO - special
+    # TODO - check if author_name is unique before insertion
     current_book.authors = _load_authors_from_worldcat_details_page(html_content)
 
     isbn10_list, isbn13_list = _load_isbns_from_worldcat_details_page(html_content)

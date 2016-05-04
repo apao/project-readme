@@ -2,6 +2,8 @@ import requests
 from pyquery import PyQuery as pq
 import json
 
+from model import LibraryBranch
+
 SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
 SCCL_AVAILABILITY_URL_BEG = "https://sccl.bibliocommons.com"
@@ -234,200 +236,93 @@ class SFPLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
         return branch_dict
 
 
-# =============================================
-# FUNCTIONS TO NORMALIZE EACH LIBRARY'S ITEM AVAILABILITY
-# =============================================
+def get_availability_dicts_for_isbn13(isbn13):
+    """
+    :param isbn13:
+    :return:
+    """
 
-def normalize_sccl_availability(dictlist):
-    """Return normalized availability to pass to javascript for map rendering."""
+    sccl_searcher = SCCLAvailabilitySearch()
+    smcl_searcher = SMCLAvailabilitySearch()
+    sfpl_searcher = SFPLAvailabilitySearch()
+    lib_sys_searcher_list = [sccl_searcher, smcl_searcher, sfpl_searcher]
 
-    branch_dict = {}
+    # NOTE - initializing defaults values as None to provide consistent return values for short-circuited conditions
+    agg_norm_avail_list = None
+    newlist = None
+    final_marker_list = None
 
-    for avail in dictlist:
-        current_branch = avail.get('branch_name')
-        current_call_num = avail.get('call_no')
-        current_branch_section = avail.get('branch_section')
-        current_num_of_copies = avail.get('num_of_copies')
-        current_url = avail.get('sccl_search_url')
-        branch_dict[current_branch] = branch_dict.get(current_branch, {})
-        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
-        branch_dict[current_branch]['search_url'] = current_url
-        if avail.get('status') == 'Available':
-            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
-            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
-        elif "Due" in avail.get('status') or "Holdshelf" in avail.get('status'):
-            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
+    if not lib_sys_searcher_list:
+        return agg_norm_avail_list, newlist, final_marker_list
+
+    dict_to_evaluate = dict()
+    for current_searcher in lib_sys_searcher_list:
+        raw_availability = current_searcher.load_availability(isbn13)
+        normalized_availability = current_searcher.normalize_availability(raw_availability)
+        dict_to_evaluate.update(normalized_availability)
+
+    if not dict_to_evaluate:
+        return agg_norm_avail_list, newlist, final_marker_list
+
+    key_list = dict_to_evaluate.keys()
+    for branch in key_list:
+        lib_branch_obj = LibraryBranch.query.filter_by(branch_name=branch).first()
+        if lib_branch_obj:
+            dict_to_evaluate[branch]['branch_geo'] = lib_branch_obj.branch_geo
+            dict_to_evaluate[branch]['sys_name'] = lib_branch_obj.library_system.sys_name
+        dict_to_evaluate[branch]['branch_name'] = branch
+
+    # TODO - move marker list creation to a separate function called marker_list(dict_to_evaluate)
+    # Filtering out branches for which the database does not have a correlated library system name
+    agg_norm_avail_list = [branch_dict for branch_dict in dict_to_evaluate.values() if branch_dict.get('sys_name')]
+    newlist = sorted(agg_norm_avail_list, key=lambda k: (k['sys_name'], k['branch_name']))
+    returned_marker_list = _avails_to_markers(agg_norm_avail_list)
+
+    final_marker_list = {
+        "type": "FeatureCollection",
+        "features": returned_marker_list
+    }
+
+    return agg_norm_avail_list, newlist, final_marker_list
+
+
+def _avails_to_markers(list_of_avails):
+    """Return marker geojson based on list of availabilities."""
+
+    marker_list = []
+
+    for avail in list_of_avails:
+        branch = avail.get('branch_name')
+        avail_copies = avail.get('avail_copies', 0)
+        unavail_copies = avail.get('unavail_copies', 0)
+        where_to_find = avail.get('where_to_find')
+        url = avail.get('search_url')
+        branch_geo = avail.get('branch_geo')
+        branch_geo_list = branch_geo.split(',')
+        branch_geo_long = float(branch_geo_list[0])
+        branch_geo_lat = float(branch_geo_list[1])
+        marker = {}
+        marker["type"] = "Feature"
+        marker["properties"] = {}
+        marker["geometry"] = {}
+        marker["geometry"]["type"] = "Point"
+        marker["geometry"]["coordinates"] = [branch_geo_long, branch_geo_lat]
+
+        if avail_copies:
+            marker_symbol = "library"
+            # branch = branch.decode('utf-8')
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            # marker["properties"]["marker-color"] = "blue"
+            # marker["properties"]["marker-size"] = "large"
+            marker_list.append(marker)
+        elif avail_copies == 0 or avail_copies == '0':
+            marker_symbol = "harbor"
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Unavailable: %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
+            marker["properties"]["marker-symbol"] = marker_symbol
+            # marker["properties"]["marker-color"] = "red"
+            marker_list.append(marker)
         else:
             continue
 
-    return branch_dict
-
-# normalize_sccl_availability(get_sccl_availability("9780439136358"))
-
-def normalize_smcl_availability(dictlist):
-    """Return normalized availability to pass to javascript for map rendering."""
-
-    branch_dict = {}
-
-    for avail in dictlist:
-        current_branch = avail.get('branch_name')
-        current_call_num = avail.get('call_no')
-        current_branch_section = avail.get('branch_section')
-        current_num_of_copies = avail.get('num_of_copies')
-        current_url = avail.get('smcl_search_url')
-        branch_dict[current_branch] = branch_dict.get(current_branch, {})
-        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
-        branch_dict[current_branch]['search_url'] = current_url
-        if avail.get('status') == 'CHECK SHELF':
-            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
-            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
-        elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
-            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
-        else:
-            continue
-
-    return branch_dict
-
-
-def normalize_sfpl_availability(dictlist):
-    """Return normalized availability to pass to javascript for map rendering."""
-
-    branch_dict = {}
-
-    for avail in dictlist:
-        current_branch = avail.get('branch_name')
-        current_call_num = avail.get('call_no')
-        current_branch_section = avail.get('branch_section')
-        current_num_of_copies = avail.get('num_of_copies')
-        current_url = avail.get('sfpl_search_url')
-        branch_dict[current_branch] = branch_dict.get(current_branch, {})
-        branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
-        branch_dict[current_branch]['search_url'] = current_url
-        if avail.get('status') == 'CHECK SHELF':
-            branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
-            branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
-        elif "Due" in avail.get('status') or "HOLD" in avail.get('status'):
-            branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
-        else:
-            continue
-
-    return branch_dict
-
-
-#
-# # =======================================================
-# # FUNCTIONS TO GET EACH LIBRARY'S EBOOK ITEM AVAILABILITY
-# # =======================================================
-#
-# def get_sccl_eresources_by_keyword(keyword):
-#     """Given search keywords, provides availability for eresources in the Santa Clara County Library System."""
-#
-#     sccl_eresource_search_url = SCCL_SEARCH_URL_BEG + urllib.quote_plus(keyword) + SCCL_SEARCH_URL_END
-#
-#     return sccl_eresource_search_url
-#
-#
-# def get_sfpl_ebooks_by_keyword(keyword):
-#     """Given search keywords, provides availability for ebooks in the San Francisco Public Library System."""
-#
-#     sfpl_ebook_id_list = []
-#     list_of_final_items = []
-#     # https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q=lean%20in&formats=EBOOK
-#     SFPL_BASE_URL = "https://sfpl.bibliocommons.com"
-#     SFPL_SEARCH_EBOOKS_URL_BEG = "https://sfpl.bibliocommons.com/search?t=smart&search_category=keyword&commit=Search&q="
-#     SFPL_SEARCH_EBOOKS_URL_END = "&formats=EBOOK"
-#     search_keywords = urllib.quote(keyword)
-#
-#     sfpl_search_ebooks_url = SFPL_SEARCH_EBOOKS_URL_BEG + search_keywords + SFPL_SEARCH_EBOOKS_URL_END
-#
-#     # requests.get the contents of the search page and convert to pq object
-#     page = requests.get(sfpl_search_ebooks_url)
-#     pq_page = pq(page.content)
-#
-#     # find the href with sfpl id no. on the page by css selector
-#     # ebook_id_objects = pq_page('img.jacketCover.bib_detail').attr('id')
-#     # ebook_id_pq_objects = pq_page.find('img.jacketCover.bib_detail')
-#     # for i in range(len(ebook_id_pq_objects)):
-#     #     sfpl_ebook_id_list.append(ebook_id_pq_objects.eq(i).attr('id'))
-#     #
-#     # title_lst = [i.text() for i in pq_page.items('span.title')]
-#     # author_lst = [i.text() for i in pq_page.items('span.author')]
-#
-#     title_results_lst = [i.find('span.title').text() for i in pq_page.items('div.list_item_outer')]
-#     author_results_lst = [i.find('span.author').text() for i in pq_page.items('div.list_item_outer')]
-#     item_href_lst = [i.find('a.jacketCoverLink').attr('href') for i in pq_page.items('div.pull-left.visible-xs.visible-sm')]
-#     ebook_format_provider_lst = [i.find('span.value.callNumber').text() for i in pq_page.items('div.row.circ_info.list_item_section')]
-#     coverurl_lst = [i.find('img.jacketCover').attr('src') for i in pq_page.items('div.pull-left.visible-xs.visible-sm')]
-#     item_avail_href_lst = [i.find('a.click_n_sub').attr('href') for i in pq_page.items('div.availability_block')]
-#     item_request_href_lst = [i.find('a.digital_request').attr('href') for i in pq_page.items('span.hold_button')]
-#
-#     item_details_full_url_lst = []
-#     for href in item_href_lst:
-#         item_full_details_url = SFPL_BASE_URL + href
-#         item_details_full_url_lst.append(item_full_details_url)
-#
-#     for i in range(len(title_results_lst)):
-#         if item_avail_href_lst[i] and item_request_href_lst[i]:
-#             item_dict = dict(title=title_results_lst[i],
-#                              author=author_results_lst[i],
-#                              item_details_url=item_details_full_url_lst[i],
-#                              ebook_format_provider=ebook_format_provider_lst[i],
-#                              coverurl=coverurl_lst[i],
-#                              item_avail_url=SFPL_BASE_URL + item_avail_href_lst[i],
-#                              item_request_url=SFPL_BASE_URL + item_request_href_lst[i])
-#             final_item_dict = get_sfpl_ebook_details(item_dict, item_dict.get('item_details_url'))
-#         else:
-#             item_dict = dict(title=title_results_lst[i],
-#                              author=author_results_lst[i],
-#                              item_details_url=item_details_full_url_lst[i],
-#                              ebook_format_provider=ebook_format_provider_lst[i],
-#                              coverurl=coverurl_lst[i],
-#                              item_avail_url="",
-#                              item_request_url="")
-#             final_item_dict = get_sfpl_ebook_details(item_dict, item_dict.get('item_details_url'))
-#         list_of_final_items.append(final_item_dict)
-#
-#     return list_of_final_items
-#
-#
-# def get_sfpl_ebook_details(itemdict, sfplurl):
-#     """Given an SFPL item url, provide details about the ebook."""
-#
-#     # item_libid_lst = []
-#     # isbns_full_lst = []
-#     # other_details_lst = []
-#     # summary_lst = []
-#     # publisher_lst = []
-#     # item_characteristics_lst = []
-#     # goodreads_info_lst = []
-#
-#     item_page = requests.get(sfplurl)
-#     pq_item_page = pq(item_page.content)
-#     item_libid_str = pq_item_page('div.content.itemDetail').attr('id')
-#     itemdict['sfpl_libid'] = item_libid_str
-#     # item_libid_lst.append(item_libid_str)
-#     item_isbns_str = pq_item_page('div.content.itemDetail').attr('data-isbns')
-#     item_isbns_lst = item_isbns_str.split(',')
-#     # isbns_full_lst.append(item_isbns_lst)
-#     for isbn in item_isbns_lst:
-#         if len(isbn) == 13:
-#             itemdict['isbn13'] = isbn
-#             goodreads_info = get_goodreads_info_by_isbn13(isbn)
-#             itemdict['isbn_to_goodreads_list'] = goodreads_info
-#             break
-#             # goodreads_info_lst.append(goodreads_info)
-#     item_pub_and_other_lst = [i.find('span.value').text() for i in pq_item_page.items('div.dataPair.clearfix')]
-#     itemdict['publisher_and_page_count'] = item_pub_and_other_lst
-#     # if len(item_pub_and_other_lst) == 5:
-#     #     item_pub, item_edition, item_isbns, item_characteristics, item_other_contributors = item_pub_and_other_lst
-#     # else:
-#     #     item_pub, item_edition, item_isbns, item_characteristics = item_pub_and_other_lst
-#     # publisher_lst.append(item_pub)
-#     # item_characteristics_lst.append(item_characteristics)
-#     # other_details_lst.append(item_pub_and_other_lst)
-#     summary = pq_item_page('div.bib_description').text()
-#     itemdict['summary'] = summary
-#     # summary_lst.append(summary)
-#
-#     return itemdict
-#
+    return marker_list
