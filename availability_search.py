@@ -2,7 +2,7 @@ import requests
 from pyquery import PyQuery as pq
 import json
 
-from model import LibraryBranch
+from model import LibraryBranch, get_book_isbn13s
 
 SCCL_SEARCH_URL_BEG = "https://sccl.bibliocommons.com/search?utf8=%E2%9C%93&t=smart&search_category=keyword&q="
 SCCL_SEARCH_URL_END = "&commit=Search&searchOpt=catalogue"
@@ -234,6 +234,37 @@ class SFPLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
                 continue
 
         return branch_dict
+
+
+def get_table_and_map_availability(bookid):
+    """
+    :param bookid:
+    :return:
+    """
+
+    final_dict = {
+        'avail_list': [],
+        'marker_list': 0
+    }
+
+    isbn13_list = get_book_isbn13s(bookid)
+
+    for isbn13_obj in isbn13_list:
+        current_isbn13 = isbn13_obj.isbn13
+        result_dicts = get_availability_dicts_for_isbn13(current_isbn13)
+        agg_norm_avail_list, newlist, final_marker_list = result_dicts
+        final_dict = {
+            'avail_list': newlist,
+            'marker_list': final_marker_list
+        }
+
+        if agg_norm_avail_list:
+            return final_dict
+        else:
+            continue
+
+    # NOTE - we would only get here if there are no matches on ISBNs
+    return final_dict
 
 
 def get_availability_dicts_for_isbn13(isbn13):

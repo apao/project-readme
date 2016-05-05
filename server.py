@@ -9,7 +9,7 @@ from model import connect_to_db
 from model import get_book_related_details
 
 from book_loader import get_crawl_results_with_cache_check
-from availability_search import get_availability_dicts_for_isbn13
+from availability_search import get_table_and_map_availability
 
 """
 SUMMARY
@@ -145,24 +145,18 @@ def item_details(bookid):
 
     book_detail_dict = get_book_related_details(bookid)
 
-    isbn13_list = book_detail_dict['isbn13s']
+    return render_template("bookdetails.html", **book_detail_dict)
 
-    for isbn13_obj in isbn13_list:
-        current_isbn13 = isbn13_obj.isbn13
-        result_dicts = get_availability_dicts_for_isbn13(current_isbn13)
-        agg_norm_avail_list, newlist, final_marker_list = result_dicts
 
-        if agg_norm_avail_list:
-            return render_template("bookdetails.html",
-                                   dictionary=book_detail_dict,
-                                   avail_list=newlist,
-                                   marker_list=final_marker_list,
-                                   **book_detail_dict)
-        else:
-            continue
+@app.route('/details/<int:bookid>/availability')
+def item_availability(bookid):
+    """Return availability details for an item."""
 
-    # NOTE - we would only get here if there are no matches on ISBNs
-    return render_template("bookdetails.html", dictionary=book_detail_dict, avail_list=[], marker_list=0)
+    results_dict = get_table_and_map_availability(bookid)
+    avail_list = results_dict['avail_list']
+    marker_list = results_dict['marker_list']
+
+    return render_template('bookavailability.html', avail_list=avail_list, marker_list=marker_list)
 
 
 @app.route('/about')

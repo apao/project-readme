@@ -1,17 +1,5 @@
 {% extends 'base.html' %}
 {% block content %}
-
-<style>
-    .mapboxgl-popup {
-        max-width: 400px;
-        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-    }
-
-    .marker-title {
-        font-weight: 700;
-    }
-</style>
-
 <div class="col-xs-12 row col-sm-10 col-sm-offset-1">
   <div class="panel panel-default">
     <div class="panel-heading title" id="{{ book.book_id }}">
@@ -54,37 +42,11 @@
             <h3>Summary</h3>
             {{ book.summary }}
         </div>
-        <div class="row availability">
-          <h3>Library Availability <button type="button" id="geolocate" class="btn btn-primary btn-lg">Find Me on the Map!</button></h3>
-          <div class="row map">
-            <div id="map"></div>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <tr>
-                <th>Library System</th>
-                <th>Branch</th>
-                <th>Avail Copies</th>
-                <th>Where to Find<br>Section | Call Number</th>
-              </tr>
-              {% for avail_dict in avail_list %}
-              <tr>
-                <td>{{ avail_dict.sys_name }}</td>
-                <td>{{ avail_dict.branch_name }}</td>
-                <td>{{ avail_dict.avail_copies | default('No Available Copies Currently') }}</td>
-                {% if avail_dict.where_to_find %}
-                <td>{{ avail_dict.where_to_find[0][0] }} | {{ avail_dict.where_to_find[0][1] }}</td>
-                {% else %}
-                <td>N/A</td>
-                {% endif %}
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="0">No Library Availability Found</td>
-              </tr>
-              {% endfor %}
-            </table>
-          </div>
+        <div id='book-availability'>
+            <div id="loading-div">
+                <i class="fa fa-spinner fa-pulse fa-5x fa-fw margin-bottom"></i>
+                Loading
+            </div>
         </div>
       </div>
       <!-- END RIGHT COLUMN -->
@@ -99,123 +61,8 @@
 
 {% block javascript %}
 <script>
-  mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhbyIsImEiOiJjaWwwaGhqMm4xdjB1dXltM2NhZGl5NHY2In0.PlgVAjJ-m_7BunI7VwjPGA';
-
-  var markers = {{ marker_list | tojson | safe }};
-
-  var map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v8',
-    center: [-122.2053906, 37.4257657],
-    zoom: 8
+  $(document).ready(function() {
+      $('#book-availability').load('/details/{{ book.book_id }}/availability');
   });
-
-  map.on('style.load', function () {
-    // Add marker data as a new GeoJSON source.
-    map.addSource("markers", {
-      "type": "geojson",
-      "data": markers
-    });
-
-    // Add a layer showing the markers.
-    map.addLayer({
-        "id": "markers",
-        "interactive": true,
-        "type": "symbol",
-        "source": "markers",
-        "layout": {
-            "icon-image": "{marker-symbol}-15",
-            "icon-allow-overlap": true
-        }
-    });
-  });
-
-  var popup = new mapboxgl.Popup();
-
-  // When a click event occurs near a marker icon, open a popup at the location of
-  // the feature, with description HTML from its properties.
-  map.on('click', function (e) {
-      map.featuresAt(e.point, {
-          radius: 7.5, // Half the marker size (15px).
-          includeGeometry: true,
-          layer: 'markers'
-      }, function (err, features) {
-
-          if (err || !features.length) {
-              popup.remove();
-              return;
-          }
-
-          var feature = features[0];
-
-          // Populate the popup and set its coordinates
-          // based on the feature found.
-          popup.setLngLat(feature.geometry.coordinates)
-              .setHTML(feature.properties.description)
-              .addTo(map);
-      });
-  });
-
-  // Use the same approach as above to indicate that the symbols are clickable
-  // by changing the cursor style to 'pointer'.
-  map.on('mousemove', function (e) {
-      map.featuresAt(e.point, {
-          radius: 7.5, // Half the marker size (15px).
-          layer: 'markers'
-      }, function (err, features) {
-          map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
-      });
-  });
-
-
-  // Fly to user location based on browser geolocation
-  $("#geolocate").click(function() {
-      console.log("We are inside geolocate js!");
-      if (!navigator.geolocation) {
-          geolocate.innerHTML = "Geolocation is not available.";
-      } else {
-          function success(position) {
-              var longitude = position.coords.longitude;
-              var latitude = position.coords.latitude;
-              map.flyTo({
-                  center: [longitude, latitude]
-              });
-              map.addSource('single-point', {
-                  "type": "geojson",
-                  "data": {
-                      "type": "FeatureCollection",
-                      "features": [{
-                        "type": "Feature",
-                        "geometry": {
-                            "type": "Point",
-                            "coordinates": [longitude, latitude]
-                        },
-                        "properties": {
-                            "title": "Your Location",
-                            "marker-symbol": "star"
-                        }
-                      }]
-                  }
-              });
-
-              map.addLayer({
-                  "id": "point",
-                  "source": "single-point",
-                  "type": "circle",
-                  "paint": {
-                    "circle-radius": 10,
-                    "circle-color": "#007cbf"
-                  }
-              });
-              $('#geolocate').prop('disabled', true);
-          };
-          function error() {
-              geolocate.innerHTML = "Unable to retrieve your location.";
-          };
-          navigator.geolocation.getCurrentPosition(success, error);
-      }
-  });
-
-
 </script>
 {% endblock %}

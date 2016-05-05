@@ -2,9 +2,6 @@
 {% block content %}
 
 <div class="col-xs-12 row col-sm-6 col-sm-offset-3">
-    <div class="row" id="loading">
-        <span></span>
-    </div>
     <div class="table-responsive">
       <table class="table table-hover">
       {% for current_book in list %}
@@ -39,21 +36,6 @@
     </div>
 </div>
 
-{% endblock %}
-
-{% block javascript %}
-<script>
-
-  function addSpinner() {
-    var spinner = '<i class="fa fa-spinner fa-pulse fa-3x"></i>'
-    $('#loading').attr("width", "300px")
-    $('#loading').attr("height", "300px")
-    $('#loading span').append(spinner);
-  }
-
-  $('.row.title').click(addSpinner);
-
-</script>
 {% endblock %}
 
 

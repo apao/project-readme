@@ -233,6 +233,18 @@ def get_book_related_details(bookid):
     return result_dict
 
 
+def get_book_isbn13s(bookid):
+    """
+    :param bookid:
+    :return:
+    """
+
+    current_book = Book.get_book_by_id(bookid)
+    isbn13_list = current_book.isbn13s
+
+    return isbn13_list
+
+
 ##############################################################################
 # Helper functions
 
