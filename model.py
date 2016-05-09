@@ -1,5 +1,6 @@
 """Models and database functions for project readme."""
 
+import os
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_sqlalchemy import SQLAlchemy
 
@@ -252,7 +253,7 @@ def connect_to_db(app):
     """Connect the database to our Flask app."""
 
     # Configure to use our PostgreSQL database
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///projectreadme'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", 'postgresql:///projectreadme')
     db.app = app
     db.init_app(app)
 

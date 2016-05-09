@@ -1,5 +1,6 @@
 """Project ReadMe."""
 import requests
+import os
 from jinja2 import StrictUndefined
 
 from flask import Flask, render_template, request
@@ -95,11 +96,12 @@ User clicks on one of the results...which leads to the app loading book availabi
 
 """
 
+DEBUG = 'NO_DEBUG' not in os.environ
 
 app = Flask(__name__)
 
 # Required to use Flask sessions and the debug toolbar
-app.secret_key = "ABC"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ABC")
 
 # Normally, if you use an undefined variable in Jinja2, it fails silently.
 # With this line, it raises an error instead.
@@ -189,4 +191,4 @@ if __name__ == "__main__":
 
     # Use the DebugToolbar
     # DebugToolbarExtension(app)
-    app.run(debug=True, host="0.0.0.0", port=PORT)
+    app.run(debug=DEBUG, host="0.0.0.0", port=PORT)
