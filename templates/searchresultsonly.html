@@ -1,0 +1,32 @@
+<div class="table-responsive">
+  <table class="table table-hover">
+  {% for current_book in list %}
+
+    <tr id="{{ current_book.book_id }}">
+      <td class="col-xs-12 col-sm-2">
+        <img src="{{ current_book.coverurl }}" class="img-responsive" alt="cover for {{ current_book.title }}">
+      </td>
+      <td class="col-xs-12 col-sm-4">
+        <a href="{{ url_for('item_details', bookid=current_book.book_id) }}"><div class="row title">
+            {{ current_book.title }}
+        </div></a>
+        <div class="row author">
+            {% for current_author in current_book.authors %}
+            {{ current_author.author_name }}
+            {% endfor %}
+        </div>
+        <div class="row publisher">
+            {{ current_book.publisher }}
+        </div>
+
+        {% if current_book.page_count %}
+        <div class="row pagecount">
+            {{ current_book.page_count }} pages
+        </div>
+        {% endif %}
+      </td>
+    </tr>
+
+  {% endfor %}
+  </table>
+</div>

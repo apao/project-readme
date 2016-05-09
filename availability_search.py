@@ -116,7 +116,7 @@ class BaseBibliocommonsAvailabilitySearch(object):
 
         raise NotImplementedError
 
-    def normalize_availability(self, dictlist):
+    def normalize_availability(self, isbn13, dictlist):
         """With list of availability dicts, create normalized set of individual dicts by copy."""
 
         raise NotImplementedError
@@ -135,7 +135,7 @@ class SCCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
         avail_url = self.availability_url_beg + availability_string
         return avail_url
 
-    def normalize_availability(self, dictlist):
+    def normalize_availability(self, isbn13, dictlist):
         """Return normalized availability to pass to javascript for map rendering."""
 
         branch_dict = {}
@@ -145,7 +145,7 @@ class SCCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
             current_call_num = avail.get('call_no')
             current_branch_section = avail.get('branch_section')
             current_num_of_copies = avail.get('num_of_copies')
-            current_url = avail.get('sccl_search_url')
+            current_url = self.create_search_url(isbn13)
             branch_dict[current_branch] = branch_dict.get(current_branch, {})
             branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
             branch_dict[current_branch]['search_url'] = current_url
@@ -173,7 +173,7 @@ class SMCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
         avail_url = self.availability_url_beg + availability_string
         return avail_url
 
-    def normalize_availability(self, dictlist):
+    def normalize_availability(self, isbn13, dictlist):
         """Return normalized availability to pass to javascript for map rendering."""
 
         branch_dict = {}
@@ -183,7 +183,7 @@ class SMCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
             current_call_num = avail.get('call_no')
             current_branch_section = avail.get('branch_section')
             current_num_of_copies = avail.get('num_of_copies')
-            current_url = avail.get('smcl_search_url')
+            current_url = self.create_search_url(isbn13)
             branch_dict[current_branch] = branch_dict.get(current_branch, {})
             branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
             branch_dict[current_branch]['search_url'] = current_url
@@ -211,7 +211,7 @@ class SFPLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
         avail_url = self.availability_url_beg + availability_string
         return avail_url
 
-    def normalize_availability(self, dictlist):
+    def normalize_availability(self, isbn13, dictlist):
         """Return normalized availability to pass to javascript for map rendering."""
 
         branch_dict = {}
@@ -221,7 +221,7 @@ class SFPLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
             current_call_num = avail.get('call_no')
             current_branch_section = avail.get('branch_section')
             current_num_of_copies = avail.get('num_of_copies')
-            current_url = avail.get('sfpl_search_url')
+            current_url = self.create_search_url(isbn13)
             branch_dict[current_branch] = branch_dict.get(current_branch, {})
             branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
             branch_dict[current_branch]['search_url'] = current_url
@@ -289,7 +289,7 @@ def get_availability_dicts_for_isbn13(isbn13):
     dict_to_evaluate = dict()
     for current_searcher in lib_sys_searcher_list:
         raw_availability = current_searcher.load_availability(isbn13)
-        normalized_availability = current_searcher.normalize_availability(raw_availability)
+        normalized_availability = current_searcher.normalize_availability(isbn13, raw_availability)
         dict_to_evaluate.update(normalized_availability)
 
     if not dict_to_evaluate:
@@ -301,6 +301,7 @@ def get_availability_dicts_for_isbn13(isbn13):
         if lib_branch_obj:
             dict_to_evaluate[branch]['branch_geo'] = lib_branch_obj.branch_geo
             dict_to_evaluate[branch]['sys_name'] = lib_branch_obj.library_system.sys_name
+            dict_to_evaluate[branch]['branch_address'] = lib_branch_obj.branch_address
         dict_to_evaluate[branch]['branch_name'] = branch
 
     # TODO - move marker list creation to a separate function called marker_list(dict_to_evaluate)
@@ -328,6 +329,7 @@ def _avails_to_markers(list_of_avails):
         unavail_copies = avail.get('unavail_copies', 0)
         where_to_find = avail.get('where_to_find')
         url = avail.get('search_url')
+        branch_address = avail.get('branch_address')
         branch_geo = avail.get('branch_geo')
         branch_geo_list = branch_geo.split(',')
         branch_geo_long = float(branch_geo_list[0])
@@ -342,14 +344,14 @@ def _avails_to_markers(list_of_avails):
         if avail_copies:
             marker_symbol = "library"
             # branch = branch.decode('utf-8')
-            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong><br>Address: %s</div><p>Copies Available: %s<br>Copies Unavailable: %s<br>Call Number: %s | %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, branch_address ,avail_copies, unavail_copies, where_to_find[0][0], where_to_find[0][1], url)
             marker["properties"]["marker-symbol"] = marker_symbol
             # marker["properties"]["marker-color"] = "blue"
             # marker["properties"]["marker-size"] = "large"
             marker_list.append(marker)
         elif avail_copies == 0 or avail_copies == '0':
             marker_symbol = "harbor"
-            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong></div><p>Copies Unavailable: %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, unavail_copies, url)
+            marker["properties"]["description"] = u"<div class='%s'><strong>%s</strong><br>Address: %s</div><p>Copies Unavailable: %s</p><p><a href='%s' target=\"_blank\" title=\"Opens in a new window\">Go to library website to learn more.</a></p>" % (branch, branch, branch_address, unavail_copies, url)
             marker["properties"]["marker-symbol"] = marker_symbol
             # marker["properties"]["marker-color"] = "red"
             marker_list.append(marker)

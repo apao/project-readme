@@ -46,21 +46,19 @@ User visits search page (/search).
 User executes a text keyword search which triggers app to...
  * crawl WorldCat.org for English-language print books
 
- * cache in the database WorldCat.org's top 10 matching results, including:
+ * crawl each of the top 10 WorldCat.org book details pages and extract and cache the following information:
  ** WorldCat.org's rank of the result for the specific keyword search
  ** Title
  ** Author
  ** WorldCat.org's book details page URL
  ** WorldCat.org's book cover image URL
-
- * crawl each of the top 10 WorldCat.org book details pages and extract the following additional information:
  ** ISBNs (both ISBN-10s and ISBN-13s)
  ** Publisher
  ** Page Count
  ** Book Format (all print books currently, as limited by search categorization)
  ** Summary
 
- * in addition, for each result's ISBNs, we read from the Goodreads API
+ * in addition, for each result's ISBNs, we read from the Goodreads API:
  ** Goodreads Rating
  ** Goodreads Ratings Count
 
@@ -93,7 +91,7 @@ User clicks on one of the results...which leads to the app loading book availabi
 ** Library Branch Name
 ** Number of Available Copies (if any)
 ** Where to Find the Copy (by section and/or call number)
-** Library System-specific URL for the book (BROKEN AND CURRENTLY ON MAP ONLY)
+** Library System-specific URL for the book
 
 """
 
@@ -117,7 +115,7 @@ def index():
 
 @app.route('/thankyou')
 def thanks_page():
-    """Thanks page for those signing up for private beta."""
+    """Thanks page for private beta sign-up."""
 
     return render_template("thanks.html")
 
@@ -129,14 +127,24 @@ def search_page():
     return render_template("search.html")
 
 
-@app.route('/results', methods=['POST'])
-def get_search_results():
-    search_keywords = request.form.get("keywords")
-    search_keywords = search_keywords.strip().lower()
+@app.route('/results')
+def show_search_results():
+    """Search results page."""
 
-    all_books = get_crawl_results_with_cache_check(search_keywords)
+    search_keywords = request.args.get("keywords")
 
-    return render_template("searchresults.html", list=all_books)
+    return render_template("searchresultspage.html", keywords=search_keywords)
+
+
+@app.route('/results/ajax')
+def search_results_ajax():
+
+    keywords = request.args.get("keywords")
+    keywords_lowered = keywords.strip().lower()
+
+    all_books = get_crawl_results_with_cache_check(keywords_lowered)
+
+    return render_template("searchresultsonly.html", list=all_books)
 
 
 @app.route('/details/<int:bookid>')
@@ -169,13 +177,13 @@ def about_page():
 if __name__ == "__main__":
     # We have to set debug=True here, since it has to be True at the point
     # that we invoke the DebugToolbarExtension
-    app.debug = True
+    # app.debug = True
 
     # http://stackoverflow.com/questions/12369295/flask-sqlalchemy-display-queries-for-debug
-    app.config['SQLALCHEMY_ECHO'] = True
+    app.config['SQLALCHEMY_ECHO'] = False
 
     connect_to_db(app)
 
     # Use the DebugToolbar
-    DebugToolbarExtension(app)
+    # DebugToolbarExtension(app)
     app.run()

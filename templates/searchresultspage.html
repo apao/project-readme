@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="col-xs-12 row col-sm-6 col-sm-offset-3">
+  <div class="panel panel-default">
+    <div class="panel-heading search-results">
+        <h1 class="panel-title">Search Results for "{{ keywords }}"</h1>
+    </div>
+    <div class="panel-body" id="search-results-section">
+        <div id="loading-div">
+            <i class="fa fa-spinner fa-pulse fa-5x fa-fw margin-bottom"></i>
+                Loading
+        </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+  $(document).ready(function() {
+      $('#search-results-section').load('{{ url_for("search_results_ajax", keywords=keywords) }}');
+  });
+</script>
+{% endblock %}
+
+

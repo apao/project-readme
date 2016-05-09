@@ -62,7 +62,7 @@
 {% block javascript %}
 <script>
   $(document).ready(function() {
-      $('#book-availability').load('/details/{{ book.book_id }}/availability');
+      $('#book-availability').load('{{ url_for("item_availability", bookid=book.book_id) }}');
   });
 </script>
 {% endblock %}

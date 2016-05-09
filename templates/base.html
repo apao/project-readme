@@ -8,6 +8,9 @@
     <script src="https://code.jquery.com/jquery.js"></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.14.2/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.14.2/mapbox-gl.css' rel='stylesheet' />
+    <!--<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v2.0.0/mapbox-gl-directions.js'></script>-->
+    <!--<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v2.0.0/mapbox-gl-directions.css' type='text/css' />-->
+
     <style>
         #map { top:0; bottom:0; height:500px; width:95%; }
     </style>
@@ -43,10 +46,6 @@
       {% block content %}
       {% endblock %}   
     </div> <!-- container -->
-
-    <!-- You need this in order to use JS-based components in the 
-    further study. Leave this at the bottom and code above it. -->
-
 
     {% block javascript %}
     {% endblock %}

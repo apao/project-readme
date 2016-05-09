@@ -6,14 +6,14 @@
 <div class="table-responsive">
     <table id="availability-table" class="table table-hover">
       <tr>
-        <th>Library System</th>
-        <th>Branch</th>
-        <th>Avail Copies</th>
-        <th>Where to Find<br>Section | Call Number</th>
+        <th><strong>Library System</strong></th>
+        <th><strong>Branch</strong></th>
+        <th><strong>Avail Copies</strong></th>
+        <th><strong>Where to Find<br>Section | Call Number</strong></th>
       </tr>
       {% for avail_dict in avail_list %}
       <tr>
-        <td>{{ avail_dict.sys_name }}</td>
+        <td><a href="{{ avail_dict.search_url }}">{{ avail_dict.sys_name }}</a></td>
         <td>{{ avail_dict.branch_name }}</td>
         <td>{{ avail_dict.avail_copies | default('No Available Copies Currently') }}</td>
         {% if avail_dict.where_to_find %}
@@ -44,41 +44,34 @@
 
 <script>
   mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhbyIsImEiOiJjaWwwaGhqMm4xdjB1dXltM2NhZGl5NHY2In0.PlgVAjJ-m_7BunI7VwjPGA';
-
+  var markers = {{ marker_list | tojson | safe }};
   var map = new mapboxgl.Map({
-      container: 'availability-map',
-      style: 'mapbox://styles/mapbox/streets-v8',
-      center: [-122.2053906, 37.4257657],
-      zoom: 8
+    container: 'availability-map',
+    style: 'mapbox://styles/mapbox/streets-v8',
+    center: [-122.2053906, 37.4257657],
+    zoom: 8
   });
 
-  $(document).ready(function() {
-      var markers = {{ marker_list|tojson|safe }};
-      map.on('style.load', function () {
-        // Add marker data as a new GeoJSON source.
-        map.addSource("markers", {
-          "type": "geojson",
-          "data": markers
-        });
-
-        // Add a layer showing the markers.
-        map.addLayer({
-          "id": "markers",
-          "interactive": true,
-          "type": "symbol",
-          "source": "markers",
-          "layout": {
+  map.on('style.load', function () {
+    // Add marker data as a new GeoJSON source.
+    map.addSource("markers", {
+      "type": "geojson",
+      "data": markers
+    });
+    // Add a layer showing the markers.
+    map.addLayer({
+        "id": "markers",
+        "interactive": true,
+        "type": "symbol",
+        "source": "markers",
+        "layout": {
             "icon-image": "{marker-symbol}-15",
             "icon-allow-overlap": true
-          }
-        });
+        }
     });
-    console.log("In the map AJAX!");
   });
-
-
+  
   var popup = new mapboxgl.Popup();
-
   // When a click event occurs near a marker icon, open a popup at the location of
   // the feature, with description HTML from its properties.
   map.on('click', function (e) {
@@ -87,22 +80,18 @@
           includeGeometry: true,
           layer: 'markers'
       }, function (err, features) {
-
           if (err || !features.length) {
               popup.remove();
               return;
           }
-
           var feature = features[0];
-
           // Populate the popup and set its coordinates
           // based on the feature found.
           popup.setLngLat(feature.geometry.coordinates)
-                  .setHTML(feature.properties.description)
-                  .addTo(map);
+              .setHTML(feature.properties.description)
+              .addTo(map);
       });
   });
-
   // Use the same approach as above to indicate that the symbols are clickable
   // by changing the cursor style to 'pointer'.
   map.on('mousemove', function (e) {
@@ -113,10 +102,8 @@
           map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
       });
   });
-
-
   // Fly to user location based on browser geolocation
-  $("#geolocate").click(function () {
+  $("#geolocate").click(function() {
       console.log("We are inside geolocate js!");
       if (!navigator.geolocation) {
           geolocate.innerHTML = "Geolocation is not available.";
@@ -132,26 +119,25 @@
                   "data": {
                       "type": "FeatureCollection",
                       "features": [{
-                          "type": "Feature",
-                          "geometry": {
-                              "type": "Point",
-                              "coordinates": [longitude, latitude]
-                          },
-                          "properties": {
-                              "title": "Your Location",
-                              "marker-symbol": "star"
-                          }
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [longitude, latitude]
+                        },
+                        "properties": {
+                            "title": "Your Location",
+                            "marker-symbol": "star"
+                        }
                       }]
                   }
               });
-
               map.addLayer({
                   "id": "point",
                   "source": "single-point",
                   "type": "circle",
                   "paint": {
-                      "circle-radius": 10,
-                      "circle-color": "#007cbf"
+                    "circle-radius": 10,
+                    "circle-color": "#007cbf"
                   }
               });
               $('#geolocate').prop('disabled', true);
@@ -162,4 +148,5 @@
           navigator.geolocation.getCurrentPosition(success, error);
       }
   });
+
 </script>
