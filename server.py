@@ -175,6 +175,9 @@ def about_page():
 
 
 if __name__ == "__main__":
+
+    PORT = int(os.environ.get("PORT", 5000))
+
     # We have to set debug=True here, since it has to be True at the point
     # that we invoke the DebugToolbarExtension
     # app.debug = True
@@ -186,4 +189,4 @@ if __name__ == "__main__":
 
     # Use the DebugToolbar
     # DebugToolbarExtension(app)
-    app.run()
+    app.run(debug=True, host="0.0.0.0", port=PORT)
