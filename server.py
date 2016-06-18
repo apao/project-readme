@@ -6,6 +6,9 @@ from jinja2 import StrictUndefined
 from flask import Flask, render_template, request
 from flask_debugtoolbar import DebugToolbarExtension
 
+import sys
+import logging
+
 from model import connect_to_db
 from model import get_book_related_details
 
@@ -99,6 +102,11 @@ User clicks on one of the results...which leads to the app loading book availabi
 DEBUG = 'NO_DEBUG' not in os.environ
 
 app = Flask(__name__)
+
+# Required to print errors to heroku logs
+# Per http://stackoverflow.com/questions/27882479/flask-projects-on-heroku-returns-500-internal-server-error
+app.logger.addHandler(logging.StreamHandler(sys.stdout))
+app.logger.setLevel(logging.ERROR)
 
 # Required to use Flask sessions and the debug toolbar
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ABC")
