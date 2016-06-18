@@ -278,10 +278,10 @@ def get_availability_dicts_for_isbn13(isbn13):
     sfpl_searcher = SFPLAvailabilitySearch()
     lib_sys_searcher_list = [sccl_searcher, smcl_searcher, sfpl_searcher]
 
-    # NOTE - initializing defaults values as None to provide consistent return values for short-circuited conditions
-    agg_norm_avail_list = None
-    newlist = None
-    final_marker_list = None
+    # NOTE - initializing defaults values as empty lists to provide consistent return values for short-circuited conditions
+    agg_norm_avail_list = list()
+    newlist = list()
+    final_marker_list = list()
 
     if not lib_sys_searcher_list:
         return agg_norm_avail_list, newlist, final_marker_list
