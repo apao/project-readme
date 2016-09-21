@@ -141,7 +141,7 @@ class SCCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
         branch_dict = {}
 
         for avail in dictlist:
-            current_branch = avail.get('branch_name')
+            current_branch = avail.get('branch_name').replace(' Library', '')  # Updated with replace to reflect new branch names in SCCL system (9/21/2016)
             current_call_num = avail.get('call_no')
             current_branch_section = avail.get('branch_section')
             current_num_of_copies = avail.get('num_of_copies')
@@ -149,10 +149,10 @@ class SCCLAvailabilitySearch(BaseBibliocommonsAvailabilitySearch):
             branch_dict[current_branch] = branch_dict.get(current_branch, {})
             branch_dict[current_branch]['where_to_find'] = branch_dict.get(current_branch).get('where_to_find', [])
             branch_dict[current_branch]['search_url'] = current_url
-            if avail.get('status') == 'Available':
+            if "In" in avail.get('status') or "Shelving" in avail.get('status'):  # Updated to reflect new statuses in SCCL system
                 branch_dict[current_branch]['avail_copies'] = branch_dict.get(current_branch).get('avail_copies', 0) + current_num_of_copies
                 branch_dict.get(current_branch).get('where_to_find').append(tuple([current_branch_section, current_call_num]))
-            elif "Due" in avail.get('status') or "Holdshelf" in avail.get('status'):
+            elif "Out" in avail.get('status') or "Being held" in avail.get('status'): # Updated to reflect new statuses in SCCL system (9/21/2016)
                 branch_dict[current_branch]['unavail_copies'] = branch_dict.get(current_branch).get('unavail_copies', 0) + current_num_of_copies
             else:
                 continue

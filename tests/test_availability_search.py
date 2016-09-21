@@ -8,6 +8,12 @@ SFPL_AVAILABILITY_HTML = u'<div class="content-header">\n  <button type="button"
 
 GRAIN_BRAIN_ISBN = "9780316234801"
 
+# import unittest
+# import tempfile
+# from readme import server
+# TODO - UPDATE TEST CASES TO REFLECT NEW AVAILABILITY STATUSES AND BRANCH NAMES IN SCCL SYSTEM
+
+
 class _TestBaseBibliocommonsAvailabilitySearch(object):
     """Core tests for Bibliocommons-based library catalog search."""
     availability_search_cls = availability_search.BaseBibliocommonsAvailabilitySearch
@@ -26,6 +32,7 @@ class _TestBaseBibliocommonsAvailabilitySearch(object):
         actual_avail_list = []
 
         result = searcher.populate_availability_by_avail_url(self.availability_html, actual_avail_list)
+
         assert actual_avail_list == result
         assert type(actual_avail_list) == list
 
@@ -521,3 +528,4 @@ class TestSFPLLibraryAvailabilitySearch(_TestBaseBibliocommonsAvailabilitySearch
 
     def test_create_search_url(self):
         super(TestSFPLLibraryAvailabilitySearch, self).test_create_search_url()
+
